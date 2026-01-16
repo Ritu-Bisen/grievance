@@ -275,9 +275,7 @@ function WarehouseDashboard() {
         <div className="mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
        
-            
-            {openSections.statistics && stats && (
-              <div className="px-3 sm:px-6 pb-4 sm:pb-6">
+              <div className="px-3 sm:px-6 py-4 sm:py-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 sm:p-6 text-white">
                     <h3 className="text-xs sm:text-sm font-medium opacity-75">Total Complaints</h3>
@@ -297,7 +295,7 @@ function WarehouseDashboard() {
                   </div>
                 </div>
               </div>
-            )}
+     
           </div>
         </div>
       

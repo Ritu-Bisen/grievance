@@ -1,8 +1,10 @@
+
 import apiClient from './apiClient';
+import { API_ENDPOINTS } from '../store/constants';
 
 // Fetch complaints with filters
 export const fetchComplaints = async (filters) => {
-  const { data } = await apiClient.get('/', {
+  const { data } = await apiClient.get(API_ENDPOINTS.DASHBOARD, {
     params: filters,
   });
   return data;
