@@ -190,7 +190,7 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
   const handleSubmit = async () => {
     try {
-      if (!facility || !item || !batch || !category || !qty || !description.trim()) {
+      if (!facility || !item || !batch || !category || !qty || !description.trim()||documents.length === 0) {
         alert("Please fill all mandatory fields");
         return;
       }
@@ -341,7 +341,17 @@ navigate(`/complaint/dispatch/${complaintCode}`);
         </Section>
 
         <Section title="Upload Supporting Documents">
-          <input type="file" multiple onChange={handleFileChange} />
+          <input type="file" multiple  onChange={handleFileChange} 
+          className="
+    file:bg-orange-500
+    file:text-white
+    file:px-4
+    file:py-2
+    file:rounded
+    file:border-0
+    hover:file:bg-orange-600
+    cursor-pointer
+  "/>
         </Section>
 
         <div className="text-right">
