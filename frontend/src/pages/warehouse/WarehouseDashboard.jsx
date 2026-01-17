@@ -162,6 +162,23 @@ function WarehouseDashboard() {
     }
   };
 
+  // Apply filters based on date and category
+  useEffect(() => {
+    let filtered = [...complaints];
+    
+    // Filter by date
+    if (selectedDateFilter) {
+      filtered = filtered.filter(c => c.raisedDate === selectedDateFilter);
+    }
+    
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter(c => c.category === selectedCategory);
+    }
+    
+    setFilteredComplaints(filtered);
+  }, [selectedDateFilter, selectedCategory, complaints]);
+
   // Clear filters and show all
   const handleClearFilters = () => {
     setSearchId('');
@@ -237,38 +254,13 @@ function WarehouseDashboard() {
     }
   };
 
-  // Role badge component
-  const RoleBadge = () => (
-    <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-      <span className="text-xs sm:text-sm font-medium text-gray-600">
-        Current Role: 
-        <span className={`ml-2 px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${
-          userRole === 'admin' ? 'bg-red-100 text-red-800' :
-          userRole === 'warehouse_manager' ? 'bg-blue-100 text-blue-800' :
-          'bg-gray-100 text-gray-800'
-        }`}>
-          {userRole.replace('_', ' ').toUpperCase()}
-        </span>
-      </span>
-      <select 
-        value={userRole} 
-        onChange={(e) => setUserRole(e.target.value)}
-        className="w-full sm:w-auto px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="admin">Admin</option>
-        <option value="warehouse_manager">Warehouse Manager</option>
-        <option value="viewer">Viewer</option>
-      </select>
-    </div>
-  );
-
+  
   const permissions = getCurrentPermissions();
 
   return (
     <div className="w-full min-h-screen bg-gray-50">
         <GovHeader title="Warehouse Dashboard" subtitle="Manage incoming complaints" />
         
-        <RoleBadge />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
 
       {/* Statistics Section */}
@@ -279,19 +271,19 @@ function WarehouseDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 sm:p-6 text-white">
                     <h3 className="text-xs sm:text-sm font-medium opacity-75">Total Complaints</h3>
-                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats.totalComplaints || 0}</p>
+                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats?.totalComplaints ?? 0}</p>
                   </div>
                   <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-4 sm:p-6 text-white">
                     <h3 className="text-xs sm:text-sm font-medium opacity-75">Pending</h3>
-                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats.pendingCount || 0}</p>
+                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats?.pendingCount ?? 0}</p>
                   </div>
                   <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg p-4 sm:p-6 text-white">
                     <h3 className="text-xs sm:text-sm font-medium opacity-75">In Progress</h3>
-                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats.inProgressCount || 0}</p>
+                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats?.inProgressCount ?? 0}</p>
                   </div>
                   <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 sm:p-6 text-white">
                     <h3 className="text-xs sm:text-sm font-medium opacity-75">Resolved</h3>
-                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats.resolvedCount || 0}</p>
+                    <p className="text-2xl sm:text-3xl font-bold mt-2">{stats?.resolvedCount ?? 0}</p>
                   </div>
                 </div>
               </div>
@@ -303,25 +295,8 @@ function WarehouseDashboard() {
       {permissions.canView.includes('search') && (
         <div className="mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <button
-              onClick={() => toggleSection('search')}
-              className="w-full px-3 sm:px-6 py-3 sm:py-4 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors duration-150"
-            >
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Search & Filters</h2>
-              <svg
-                className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 transition-transform duration-200 ${
-                  openSections.search ? 'transform rotate-180' : ''
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {openSections.search && (
-              <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
+            <div className="px-3 sm:px-6 py-2 sm:py-3">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Search Section */}
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Search Complaint</h3>
@@ -377,7 +352,7 @@ function WarehouseDashboard() {
                           onClick={handleClearFilters} 
                           className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 text-sm sm:text-base"
                         >
-                          Clear
+                          Clear Filter
                         </button>
                         {permissions.canExport && (
                           <button 
@@ -392,8 +367,82 @@ function WarehouseDashboard() {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Category Filter Badges */}
+      {permissions.canView.includes('complaints') && (
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'physical-damage' ? '' : 'physical-damage')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  selectedCategory === 'physical-damage'
+                    ? 'bg-gray-100 border-gray-400 text-gray-900'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <span className="font-medium">Physical Damage</span>
+                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-sm font-semibold">
+                  {stats?.categoryStats?.['physical-damage'] || 0}
+                </span>
+              </button>
+              
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'adr-reaction' ? '' : 'adr-reaction')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  selectedCategory === 'adr-reaction'
+                    ? 'bg-gray-100 border-gray-400 text-gray-900'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="font-medium">ADR Reaction</span>
+                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-sm font-semibold">
+                  {stats?.categoryStats?.['adr-reaction'] || 0}
+                </span>
+              </button>
+              
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'poor-quality' ? '' : 'poor-quality')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  selectedCategory === 'poor-quality'
+                    ? 'bg-gray-100 border-gray-400 text-gray-900'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                </svg>
+                <span className="font-medium">Poor Quality</span>
+                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-sm font-semibold">
+                  {stats?.categoryStats?.['poor-quality'] || 0}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complaints Table Section */}
+      {permissions.canView.includes('complaints') && selectedCategory && (
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+            </svg>
+            {selectedCategory === 'physical-damage' && 'Physical Damage Complaints'}
+            {selectedCategory === 'adr-reaction' && 'ADR Reaction Complaints'}
+            {selectedCategory === 'poor-quality' && 'Poor Quality Complaints'}
+          </h2>
         </div>
       )}
 
@@ -401,27 +450,11 @@ function WarehouseDashboard() {
       {permissions.canView.includes('complaints') && (
         <div className="mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <button
-              onClick={() => toggleSection('complaints')}
-              className="w-full px-3 sm:px-6 py-3 sm:py-4 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors duration-150"
-            >
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+            <div className="px-3 sm:px-6 py-4 sm:py-6">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                 Complaints List ({filteredComplaints.length})
               </h2>
-              <svg
-                className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 transition-transform duration-200 ${
-                  openSections.complaints ? 'transform rotate-180' : ''
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {openSections.complaints && (
-              <div className="px-3 sm:px-6 pb-4 sm:pb-6">
+              <div>
                 {loading ? (
                   <div className="flex flex-col sm:flex-row justify-center items-center py-8 sm:py-12 space-y-3 sm:space-y-0 sm:space-x-3">
                     <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600"></div>
@@ -507,15 +540,27 @@ function WarehouseDashboard() {
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility</th>
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch No.</th>
-                            <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty (D/T)</th>
+                            <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty (Damaged/Total)</th>
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raised On</th>
-                            <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timeline</th>
                             <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {filteredComplaints.map((complaint) => (
+                          {filteredComplaints.map((complaint) => {
+                            const raisedDate = new Date(complaint.raisedDate);
+                            const formattedDate = raisedDate.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: '2-digit', 
+                              year: 'numeric' 
+                            });
+                            
+                            // Parse timeline to extract number of days
+                            const timelineMatch = complaint.timeline?.match(/(\d+)\s*day/i);
+                            const daysLeft = timelineMatch ? parseInt(timelineMatch[1]) : null;
+                            const isUrgent = daysLeft && daysLeft <= 3;
+                            
+                            return (
                             <tr key={complaint.id} className="hover:bg-gray-50 transition-colors duration-150">
                               <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm font-medium text-gray-900">
                                 <button
@@ -526,13 +571,13 @@ function WarehouseDashboard() {
                                   {complaint.complaintId}
                                 </button>
                               </td>
-                              <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm text-gray-900">
-                                <div className="max-w-xs truncate" title={complaint.itemName}>
+                              <td className="px-4 xl:px-6 py-4 text-xs xl:text-sm text-gray-900">
+                                <div className="max-w-xs" title={complaint.itemName}>
                                   {complaint.itemName}
                                 </div>
                               </td>
-                              <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm text-gray-900">
-                                <div className="max-w-xs truncate" title={complaint.facility}>
+                              <td className="px-4 xl:px-6 py-4 text-xs xl:text-sm text-gray-900">
+                                <div className="max-w-xs" title={complaint.facility}>
                                   {complaint.facility}
                                 </div>
                               </td>
@@ -540,44 +585,44 @@ function WarehouseDashboard() {
                                 {complaint.batchNo}
                               </td>
                               <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm text-gray-900">
-                                {complaint.damagedQty}/{complaint.totalQty}
+                                <span className="text-red-600 font-semibold">{complaint.damagedQty}</span>
+                                <span className="text-gray-500">/</span>
+                                <span>{complaint.totalQty}</span>
                               </td>
                               <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm text-gray-900">
-                                {new Date(complaint.raisedDate).toLocaleDateString()}
+                                {formattedDate}
                               </td>
-                              <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  complaint.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  complaint.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                                  complaint.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {complaint.status.replace('-', ' ')}
-                                </span>
-                              </td>
-                              <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm text-gray-900">
-                                {complaint.timeline}
+                              <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm">
+                                <div className={`flex items-center gap-1 ${isUrgent ? 'text-orange-600' : 'text-gray-900'}`}>
+                                  {isUrgent && (
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                  <span className={isUrgent ? 'font-medium' : ''}>{complaint.timeline}</span>
+                                </div>
                               </td>
                               <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-xs xl:text-sm font-medium">
-                                <div className="flex flex-col xl:flex-row xl:space-x-2 space-y-1 xl:space-y-0">
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => {/* Handle download */}}
+                                    className="text-gray-600 hover:text-gray-900 transition-colors duration-150"
+                                    title="Download"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                  </button>
                                   <button
                                     onClick={() => setSelectedComplaint(complaint)}
                                     className="text-blue-600 hover:text-blue-900 transition-colors duration-150 text-xs xl:text-sm"
                                   >
-                                    View
+                                    View Details
                                   </button>
-                                  {permissions.canResolve && complaint.status !== 'resolved' && (
-                                    <button
-                                      onClick={() => handleResolveComplaint(complaint.id)}
-                                      className="text-green-600 hover:text-green-900 transition-colors duration-150 text-xs xl:text-sm"
-                                    >
-                                      Resolve
-                                    </button>
-                                  )}
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
@@ -592,7 +637,7 @@ function WarehouseDashboard() {
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

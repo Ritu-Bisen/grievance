@@ -10,7 +10,8 @@ export const dummyComplaints = [
     totalQty: 500,
     raisedDate: '2026-01-10',
     status: 'pending',
-    timeline: '5 days',
+    timeline: '5 days left',
+    category: 'physical-damage',
     description: 'Physical damage to packaging during transit. Multiple cartons found with torn labels and broken seals.',
   },
   {
@@ -23,7 +24,8 @@ export const dummyComplaints = [
     totalQty: 300,
     raisedDate: '2026-01-12',
     status: 'in-progress',
-    timeline: '3 days',
+    timeline: '3 days left',
+    category: 'poor-quality',
     description: 'Quality issue - observed color change in some capsules. Suspected exposure to moisture.',
   },
   {
@@ -36,7 +38,8 @@ export const dummyComplaints = [
     totalQty: 1000,
     raisedDate: '2026-01-08',
     status: 'resolved',
-    timeline: '8 days',
+    timeline: '8 days left',
+    category: 'poor-quality',
     description: 'Resolved - Replacement batch dispatched. Original batch returned to warehouse for disposal.',
   },
   {
@@ -49,7 +52,8 @@ export const dummyComplaints = [
     totalQty: 600,
     raisedDate: '2026-01-14',
     status: 'pending',
-    timeline: '2 days',
+    timeline: '2 days left',
+    category: 'physical-damage',
     description: 'Container damage - bottles found cracked, tablets exposed to air. Potential contamination risk.',
   },
   {
@@ -62,7 +66,8 @@ export const dummyComplaints = [
     totalQty: 400,
     raisedDate: '2026-01-13',
     status: 'in-progress',
-    timeline: '3 days',
+    timeline: '3 days left',
+    category: 'adr-reaction',
     description: 'ADR Reaction - Multiple patients reported gastrointestinal discomfort. Under investigation.',
   },
   {
@@ -75,7 +80,8 @@ export const dummyComplaints = [
     totalQty: 350,
     raisedDate: '2026-01-11',
     status: 'pending',
-    timeline: '5 days',
+    timeline: '5 days left',
+    category: 'physical-damage',
     description: 'Label damage - Batch numbers and expiry dates illegible on multiple bottles.',
   },
   {
@@ -88,7 +94,8 @@ export const dummyComplaints = [
     totalQty: 250,
     raisedDate: '2026-01-09',
     status: 'resolved',
-    timeline: '7 days',
+    timeline: '7 days left',
+    category: 'poor-quality',
     description: 'Resolved - Quality testing confirmed no issues. Facility staff trained on proper storage.',
   },
   {
@@ -101,7 +108,8 @@ export const dummyComplaints = [
     totalQty: 500,
     raisedDate: '2026-01-15',
     status: 'pending',
-    timeline: '1 day',
+    timeline: '1 day left',
+    category: 'physical-damage',
     description: 'Physical damage - Capsules found crushed in multiple strips. Transport mishandling suspected.',
   },
 ];
@@ -112,4 +120,9 @@ export const dummyStats = {
   pendingCount: 4,
   inProgressCount: 2,
   resolvedCount: 2,
+  categoryStats: {
+    'physical-damage': 4,
+    'adr-reaction': 1,
+    'poor-quality': 3,
+  },
 };
