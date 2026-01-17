@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import GovHeader from "../../components/GovHeader";
 
 /* ---------------- MOCK DATA (TEMP) ---------------- */
@@ -79,10 +80,8 @@ export default function ComplaintTypeSelection() {
       <GovHeader />
 
       <div className="max-w-6xl mx-auto p-6">
-        {/* Header Row */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">Raise New Complaint</h2>
-
           <button
             onClick={() => navigate(-1)}
             className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100"
@@ -111,6 +110,7 @@ export default function ComplaintTypeSelection() {
 
         {selectedType === "PHYSICAL" && (
           <ComplaintBaseForm
+            complaintType="PHYSICAL"
             title="Physical Damage Complaint Form"
             categoryLabel="Physical Damage Type"
             categoryOptions={PHYSICAL_DAMAGE_TYPES}
@@ -119,6 +119,7 @@ export default function ComplaintTypeSelection() {
 
         {selectedType === "ADR" && (
           <ComplaintBaseForm
+            complaintType="ADR"
             title="ADR Reaction Complaint Form"
             categoryLabel="ADR Reaction Type"
             categoryOptions={ADR_CATEGORIES}
@@ -127,6 +128,7 @@ export default function ComplaintTypeSelection() {
 
         {selectedType === "QUALITY" && (
           <ComplaintBaseForm
+            complaintType="QUALITY"
             title="Poor Quality Complaint Form"
             categoryLabel="Quality Issue Type"
             categoryOptions={POOR_QUALITY_CATEGORIES}
@@ -151,9 +153,11 @@ function TypeCard({ title, description, onClick }) {
   );
 }
 
-/* ---------------- BASE FORM ---------------- */
+/* ---------------- BASE FORM (ORIGINAL UI) ---------------- */
 
-function ComplaintBaseForm({ title, categoryLabel, categoryOptions }) {
+function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintType }) {
+  const navigate = useNavigate();
+
   const [facilityQuery, setFacilityQuery] = useState("");
   const [facility, setFacility] = useState(null);
 
@@ -184,28 +188,48 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions }) {
     setDocuments(Array.from(e.target.files));
   };
 
-  const handleSubmit = () => {
-    if (!facility || !item || !batch || !category || !qty || !description.trim()) {
-      alert("Please fill all mandatory fields");
-      return;
+  const handleSubmit = async () => {
+    try {
+      if (!facility || !item || !batch || !category || !qty || !description.trim()) {
+        alert("Please fill all mandatory fields");
+        return;
+      }
+
+      if (Number(qty) > batch.quantity) {
+        alert("Quantity cannot exceed received quantity");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("complaint_type", complaintType);
+      formData.append("category", category);
+      formData.append("affected_quantity", qty);
+      formData.append("description", description);
+      formData.append("facility", JSON.stringify(facility));
+      formData.append("item", JSON.stringify(item));
+      formData.append("batch", JSON.stringify(batch));
+
+      documents.forEach(file => {
+        formData.append("documents", file);
+      });
+
+      const res = await axios.post(
+  "http://localhost:5000/api/grievance/complaint-user/create",
+  formData,
+  { headers: { "Content-Type": "multipart/form-data" } }
+);
+
+// 🔹 get complaint code returned by backend
+const complaintCode = res.data.complaint_code;
+
+// 🔹 redirect to Dispatch Sample page
+alert("Complaint submitted successfully");
+navigate(`/complaint/dispatch/${complaintCode}`);
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit complaint");
     }
-
-    if (Number(qty) > batch.quantity) {
-      alert("Quantity cannot exceed received quantity");
-      return;
-    }
-
-    console.log({
-      facility,
-      item,
-      batch,
-      category,
-      qty,
-      description,
-      documents,
-    });
-
-    alert("Complaint submitted successfully");
   };
 
   return (
@@ -213,6 +237,7 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions }) {
       <div className="bg-blue-50 px-4 py-3 font-medium">{title}</div>
 
       <div className="p-6 space-y-6">
+
         <Section title="Facility Details">
           <DropdownInput
             label="Facility Name *"

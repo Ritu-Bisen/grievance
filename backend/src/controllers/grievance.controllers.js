@@ -1,56 +1,60 @@
-const grievanceService = require("../services/grievance.service");
+import pool from "../config/db.js";
+import {
+  createComplaintService,
+  dashboardService
+} from "../services/grievance.service.js";
 
-/**
- * Complaint User Dashboard
- */
-exports.complaintUserDashboard = (req, res) => {
-  const userId = 1; // TEMP
+export const createComplaint = async (req, res) => {
+  console.log("🔥 CREATE COMPLAINT API HIT");
 
-  const filters = {
-    complaintCode: req.query.complaintCode || null,
-    status: req.query.status || null,
-    fromDate: req.query.fromDate || null,
-    toDate: req.query.toDate || null
-  };
+  try {
+    const facility = JSON.parse(req.body.facility);
+    const item = JSON.parse(req.body.item);
+    const batch = JSON.parse(req.body.batch);
 
-  grievanceService.getComplaintUserDashboard(
-    userId,
-    filters,
-    (err, complaints) => {
-      if (err) {
-        return res.status(500).json({
-          message: "Failed to load complaint dashboard"
-        });
-      }
+    const documents = req.files?.map(f => f.filename) || [];
 
-      return res.json({
-        message: "Complaint dashboard loaded",
-        complaints
-      });
-    }
-  );
+    const complaintCode = await createComplaintService(
+      {
+        ...req.body,
+        facility,
+        item,
+        batch
+      },
+      documents
+    );
+
+    res.status(201).json({
+      message: "Complaint submitted successfully",
+      complaint_code: complaintCode
+    });
+
+  } catch (err) {
+    console.error("❌ CREATE ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
-/**
- * Raise Complaint – STEP 1 ONLY
- * User selects complaint type here
- */
-exports.getComplaintTypes = (req, res) => {
-  return res.status(200).json({
-    message: "Select complaint type",
-    complaintTypes: [
-      {
-        code: "PHYSICAL_DAMAGE",
-        title: "Physical Damage"
-      },
-      {
-        code: "ADR_REACTION",
-        title: "ADR Reaction"
-      },
-      {
-        code: "POOR_QUALITY",
-        title: "Poor Quality"
-      }
-    ]
-  });
+export const complaintDashboard = async (req, res) => {
+  try {
+    const complaints = await dashboardService(req.query);
+    res.json({ complaints });
+  } catch (err) {
+    res.status(500).json({ message: "Dashboard load failed" });
+  }
+};
+
+export const viewComplaint = async (req, res) => {
+  const { code } = req.params;
+
+  const [rows] = await pool.execute(
+    "SELECT * FROM complaints WHERE complaint_code = ?",
+    [code]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  res.json(rows[0]);
 };

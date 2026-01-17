@@ -1,26 +1,21 @@
-require("dotenv").config();   // MUST BE FIRST
+import express from "express";
+import cors from "cors";
+import grievanceRoutes from "./routes/grievance.routes.js";
 
-const express = require("express");
-const cors = require("cors");
-const db = require("./config/db");
+const app = express();
 
-const app = express(); // ✅ app must be defined BEFORE using it
+/* 🔥 ENABLE CORS */
+app.use(cors({
+  origin: ["http://localhost:3000","https://stnjr6z8-5000.euw.devtunnels.ms","http://localhost:5173"],// or 5173 if Vite
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 
-// Middlewares
-app.use(cors());
 app.use(express.json());
-
-// Routes
-const grievanceRoutes = require("./routes/grievance.routes");
+app.use("/uploads", express.static("uploads"));
 app.use("/api/grievance", grievanceRoutes);
-
-// Test route
 app.get("/", (req, res) => {
-  res.send("Grievance System Backend Running");
+  res.send("Backend working");
 });
 
-// Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default app;
