@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import GovHeader from "../../components/GovHeader";
 
+/* 🔹 ICONS */
+import { FaBoxOpen, FaHeartbeat, FaExclamationTriangle } from "react-icons/fa";
+
 /* ---------------- MOCK DATA (TEMP) ---------------- */
 
 const facilities = [
@@ -94,16 +97,19 @@ export default function ComplaintTypeSelection() {
           <TypeCard
             title="Physical Damage"
             description="Damage to packaging, bottle, label, seal, or container"
+            icon={FaBoxOpen}
             onClick={() => setSelectedType("PHYSICAL")}
           />
           <TypeCard
             title="ADR Reaction"
             description="Adverse drug reactions or side effects"
+            icon={FaHeartbeat}
             onClick={() => setSelectedType("ADR")}
           />
           <TypeCard
             title="Poor Quality"
             description="Quality issues like contamination or potency"
+            icon={FaExclamationTriangle}
             onClick={() => setSelectedType("QUALITY")}
           />
         </div>
@@ -139,16 +145,33 @@ export default function ComplaintTypeSelection() {
   );
 }
 
-/* ---------------- TYPE CARD ---------------- */
+/* ---------------- TYPE CARD (COLOR + ICONS) ---------------- */
 
-function TypeCard({ title, description, onClick }) {
+function TypeCard({ title, description, onClick, icon: Icon }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white border rounded p-5 cursor-pointer hover:shadow-md transition"
+      className="
+        bg-green-700
+        border border-green-800
+        rounded
+        p-5
+        cursor-pointer
+        hover:bg-green-800
+        hover:shadow-md
+        transition
+        text-white
+        flex gap-4
+      "
     >
-      <h3 className="font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
+      <div className="text-3xl  mt-1">
+        <Icon />
+      </div>
+
+      <div>
+        <h3 className="font-semibold mb-2">{title}</h3>
+        <p className="text-sm text-green-100">{description}</p>
+      </div>
     </div>
   );
 }
@@ -190,7 +213,15 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
   const handleSubmit = async () => {
     try {
-      if (!facility || !item || !batch || !category || !qty || !description.trim()||documents.length === 0) {
+      if (
+        !facility ||
+        !item ||
+        !batch ||
+        !category ||
+        !qty ||
+        !description.trim() ||
+        documents.length === 0
+      ) {
         alert("Please fill all mandatory fields");
         return;
       }
@@ -214,18 +245,14 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
       });
 
       const res = await axios.post(
-  "http://localhost:5000/api/grievance/complaint-user/create",
-  formData,
-  { headers: { "Content-Type": "multipart/form-data" } }
-);
+        "http://localhost:5000/api/grievance/complaint-user/create",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
-// 🔹 get complaint code returned by backend
-const complaintCode = res.data.complaint_code;
-
-// 🔹 redirect to Dispatch Sample page
-alert("Complaint submitted successfully");
-navigate(`/complaint/dispatch/${complaintCode}`);
-
+      const complaintCode = res.data.complaint_code;
+      alert("Complaint submitted successfully");
+      navigate(`/complaint/dispatch/${complaintCode}`);
     } catch (err) {
       console.error(err);
       alert("Failed to submit complaint");
@@ -341,17 +368,21 @@ navigate(`/complaint/dispatch/${complaintCode}`);
         </Section>
 
         <Section title="Upload Supporting Documents">
-          <input type="file" multiple  onChange={handleFileChange} 
-          className="
-    file:bg-orange-500
-    file:text-white
-    file:px-4
-    file:py-2
-    file:rounded
-    file:border-0
-    hover:file:bg-orange-600
-    cursor-pointer
-  "/>
+          <input
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="
+              file:bg-orange-500
+              file:text-white
+              file:px-4
+              file:py-2
+              file:rounded
+              file:border-0
+              hover:file:bg-orange-600
+              cursor-pointer
+            "
+          />
         </Section>
 
         <div className="text-right">

@@ -21,9 +21,6 @@ export default function ComplaintUserDashboard() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
 
-  // Show / Hide complaints (ADDED)
-  const [showComplaints, setShowComplaints] = useState(true);
-
   /* ---------------- LOAD DATA ---------------- */
 
   const loadDashboard = () => {
@@ -48,7 +45,7 @@ export default function ComplaintUserDashboard() {
     loadDashboard();
   }, []);
 
-  /* ---------------- CLEAR FILTERS ---------------- */
+  /* ---------------- CLEAR FILTERS (ADDED) ---------------- */
 
   const clearFilters = () => {
     setComplaintCode("");
@@ -58,6 +55,7 @@ export default function ComplaintUserDashboard() {
     setShowDropdown(false);
     setFilteredIds([]);
 
+    // reload full dashboard (no filters)
     axios
       .get("http://localhost:5000/api/grievance/complaint-user/dashboard")
       .then((res) => {
@@ -179,16 +177,8 @@ export default function ComplaintUserDashboard() {
             </div>
           </div>
 
-          {/* BUTTONS */}
+          {/* APPLY + CLEAR FILTERS (UPDATED UI, NOTHING REMOVED) */}
           <div className="flex justify-end gap-3 mt-4">
-            {/* SHOW / HIDE BUTTON (ADDED) */}
-            <button
-              onClick={() => setShowComplaints((prev) => !prev)}
-              className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
-            >
-              {showComplaints ? "Hide Complaints" : "Show Complaints"}
-            </button>
-
             <button
               onClick={clearFilters}
               className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
@@ -208,63 +198,61 @@ export default function ComplaintUserDashboard() {
           </div>
         </div>
 
-        {/* TABLE (CONDITIONALLY SHOWN) */}
-        {showComplaints && (
-          <div className="bg-white border rounded overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-orange-500 text-white">
+        {/* TABLE */}
+        <div className="bg-white border rounded overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-orange-500 text-white">
+              <tr>
+                <th className="p-3">Complaint ID</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Category</th>
+                <th className="p-3">Facility</th>
+                <th className="p-3">Item</th>
+                <th className="p-3">Batch</th>
+                <th className="p-3">Qty</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Date</th>
+                <th className="p-3">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {complaints.length === 0 && (
                 <tr>
-                  <th className="p-3">Complaint ID</th>
-                  <th className="p-3">Type</th>
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Facility</th>
-                  <th className="p-3">Item</th>
-                  <th className="p-3">Batch</th>
-                  <th className="p-3">Qty</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Action</th>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    No complaints found
+                  </td>
                 </tr>
-              </thead>
+              )}
 
-              <tbody>
-                {complaints.length === 0 && (
-                  <tr>
-                    <td colSpan="10" className="p-6 text-center text-gray-500">
-                      No complaints found
-                    </td>
-                  </tr>
-                )}
-
-                {complaints.map((c) => (
-                  <tr key={c.complaint_code} className="border-t">
-                    <td className="p-3">{c.complaint_code}</td>
-                    <td className="p-3">{c.complaint_type}</td>
-                    <td className="p-3">{c.category}</td>
-                    <td className="p-3">{c.facility_name}</td>
-                    <td className="p-3">{c.item_name}</td>
-                    <td className="p-3">{c.batch_no}</td>
-                    <td className="p-3">{c.affected_quantity}</td>
-                    <td className="p-3">{c.status}</td>
-                    <td className="p-3">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-3">
-                      <button
-                        onClick={() =>
-                          navigate(`/complaint/view/${c.complaint_code}`)
-                        }
-                        className="text-blue-600 underline"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              {complaints.map((c) => (
+                <tr key={c.complaint_code} className="border-t">
+                  <td className="p-3">{c.complaint_code}</td>
+                  <td className="p-3">{c.complaint_type}</td>
+                  <td className="p-3">{c.category}</td>
+                  <td className="p-3">{c.facility_name}</td>
+                  <td className="p-3">{c.item_name}</td>
+                  <td className="p-3">{c.batch_no}</td>
+                  <td className="p-3">{c.affected_quantity}</td>
+                  <td className="p-3">{c.status}</td>
+                  <td className="p-3">
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() =>
+                        navigate(`/complaint/view/${c.complaint_code}`)
+                      }
+                      className="text-blue-600 underline"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
       </div>
     </div>
