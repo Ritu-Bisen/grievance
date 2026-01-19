@@ -8,6 +8,9 @@ export default function ComplaintView() {
   const navigate = useNavigate();
   const [complaint, setComplaint] = useState(null);
 
+  /* ---------- IMAGE PREVIEW STATE ---------- */
+  const [previewImage, setPreviewImage] = useState(null);
+
   useEffect(() => {
     axios
       .get(`http://localhost:5000/api/grievance/complaint-user/view/${code}`)
@@ -17,8 +20,12 @@ export default function ComplaintView() {
 
   if (!complaint) return null;
 
-  /* ---------------- DOWNLOAD DETAILS AS CSV ---------------- */
+  /* ---------------- HELPER: CHECK IMAGE FILE ---------------- */
+  const isImageFile = (filename) => {
+    return /\.(jpg|jpeg|png|webp)$/i.test(filename);
+  };
 
+  /* ---------------- DOWNLOAD DETAILS AS CSV ---------------- */
   const downloadCSV = () => {
     const rows = [
       ["Field", "Value"],
@@ -118,18 +125,61 @@ export default function ComplaintView() {
                     {doc.split("-").slice(1).join("-")}
                   </span>
 
-                  <a
-                    href={`http://localhost:5000/api/grievance/complaint-user/download/${doc}`}
-                    className="text-blue-600 underline"
-                  >
-                    Download
-                  </a>
+                  <div className="flex gap-3">
+                    {isImageFile(doc) && (
+                      <button
+                        onClick={() =>
+                          setPreviewImage(
+                            `http://localhost:5000/uploads/${doc}`
+                          )
+                        }
+                        className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                      >
+                        View Image
+                      </button>
+                    )}
+
+                    <a
+                      href={`http://localhost:5000/api/grievance/complaint-user/download/${doc}`}
+                      className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* ---------------- IMAGE PREVIEW MODAL ---------------- */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded max-w-3xl w-full">
+
+            {/* Header row (NO OVERLAP) */}
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {/* Image */}
+            <div className="flex justify-center">
+              <img
+                src={previewImage}
+                alt="Preview"
+                className="max-h-[75vh] object-contain"
+              />
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
