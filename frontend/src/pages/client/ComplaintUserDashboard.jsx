@@ -45,6 +45,27 @@ export default function ComplaintUserDashboard() {
     loadDashboard();
   }, []);
 
+  /* ---------------- CLEAR FILTERS (ADDED) ---------------- */
+
+  const clearFilters = () => {
+    setComplaintCode("");
+    setStatus("");
+    setFromDate("");
+    setToDate("");
+    setShowDropdown(false);
+    setFilteredIds([]);
+
+    // reload full dashboard (no filters)
+    axios
+      .get("http://localhost:5000/api/grievance/complaint-user/dashboard")
+      .then((res) => {
+        setComplaints(res.data.complaints || []);
+      })
+      .catch(() => {
+        alert("Failed to load dashboard");
+      });
+  };
+
   /* ---------------- COMPLAINT ID DROPDOWN LOGIC ---------------- */
 
   const handleComplaintSearchChange = (value) => {
@@ -156,8 +177,15 @@ export default function ComplaintUserDashboard() {
             </div>
           </div>
 
-          {/* APPLY */}
-          <div className="text-right mt-4">
+          {/* APPLY + CLEAR FILTERS (UPDATED UI, NOTHING REMOVED) */}
+          <div className="flex justify-end gap-3 mt-4">
+            <button
+              onClick={clearFilters}
+              className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+            >
+              Clear Filters
+            </button>
+
             <button
               onClick={() => {
                 setShowDropdown(false);
