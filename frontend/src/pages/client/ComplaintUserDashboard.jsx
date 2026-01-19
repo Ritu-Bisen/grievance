@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import GovHeader from "../../components/GovHeader";
+import { FaPlusCircle, FaHospital } from "react-icons/fa";
 
 export default function ComplaintUserDashboard() {
   const navigate = useNavigate();
@@ -81,16 +82,53 @@ export default function ComplaintUserDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <GovHeader>
-        <button
-          onClick={() => navigate("/complaint/select-type")}
-          className="bg-orange-500 text-white px-5 py-2 rounded"
-        >
-          Raise New Complaint
-        </button>
-      </GovHeader>
+      <GovHeader />
 
       <div className="max-w-7xl mx-auto p-6">
+
+        {/* ✅ WELCOME + RAISE SECTION */}
+        
+         <div className="
+  bg-green-50
+  border
+  border-green-200
+  rounded
+  px-6
+  py-4
+  mb-6
+  flex
+  items-center
+  justify-between
+
+
+        ">
+          {/* LEFT SIDE */}
+          <div className="flex items-center gap-3">
+            <FaHospital className="text-green-600 text-2xl" />
+            <h2 className="text-lg font-semibold text-gray-800">
+              Welcome to Facility Dashboard
+            </h2>
+          </div>
+
+          {/* RIGHT SIDE */}
+          <button
+            onClick={() => navigate("/complaint/select-type")}
+            className="
+              bg-blue-800
+              text-white
+              px-8
+              py-3
+              rounded
+              flex
+              items-center
+              gap-2
+              hover:bg-orange-600
+            "
+          >
+            <FaPlusCircle />
+            Raise New Complaint
+          </button>
+        </div>
 
         {/* FILTER CARD */}
         <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
@@ -128,7 +166,7 @@ export default function ComplaintUserDashboard() {
               )}
             </div>
 
-            {/* STATUS FILTER */}
+            {/* STATUS */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
@@ -187,7 +225,7 @@ export default function ComplaintUserDashboard() {
           </div>
         </div>
 
-        {/* TABLE */}
+        {/* TABLE (UNCHANGED) */}
         <div className="bg-white border rounded overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-orange-500 text-white">
@@ -229,19 +267,17 @@ export default function ComplaintUserDashboard() {
                     {new Date(c.created_at).toLocaleDateString()}
                   </td>
 
-                  {/* VIEW */}
                   <td className="p-3">
                     <button
                       onClick={() =>
                         navigate(`/complaint/view/${c.complaint_code}`)
                       }
-                      className="!bg-blue-600 !text-white px-3 py-1 rounded text-xs hover:!bg-blue-700"
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
                     >
                       View
                     </button>
                   </td>
 
-                  {/* SAMPLE DISPATCH */}
                   <td className="p-3">
                     {c.status === "SUBMITTED" && (
                       <button
@@ -255,7 +291,7 @@ export default function ComplaintUserDashboard() {
                     )}
 
                     {c.status === "SAMPLE_DISPATCHED_FACILITY" && (
-                      <span className=" text-green-700 px-3 py-1 rounded text-xs font-medium">
+                      <span className="text-green-700 text-xs font-medium">
                         Sample Dispatched
                       </span>
                     )}

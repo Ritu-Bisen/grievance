@@ -31,42 +31,46 @@ export default function DispatchSample() {
       <GovHeader />
 
       <div className="max-w-3xl mx-auto p-6">
-        <div className="bg-white border rounded p-6 text-center">
+        <div className="bg-white border rounded p-6">
 
-          <h2 className="text-xl font-semibold text-green-600 mb-4">
-            Dispatch Sample
-          </h2>
+          {/* HEADER */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-green-600">
+              Dispatch Sample
+            </h2>
 
-          <p className="mb-4">
-            <strong>Complaint ID:</strong> {complaintCode}
-          </p>
-
-          {/* BEFORE DISPATCH */}
-          {!dispatched && (
+            {/* ✅ ONLY BACK BUTTON (FORM STYLE) */}
             <button
-              onClick={handleDispatch}
-              disabled={loading}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
+              onClick={() => navigate("/complaint/dashboard")}
+              className="bg-blue-50 text-blue-700 px-4 py-1 rounded hover:bg-blue-100"
             >
-              {loading ? "Dispatching..." : "Dispatch Sample"}
+              Back
             </button>
-          )}
+          </div>
 
-          {/* AFTER DISPATCH */}
-          {dispatched && (
-            <>
+          <div className="text-center">
+            <p className="mb-4">
+              <strong>Complaint ID:</strong> {complaintCode}
+            </p>
+
+            {/* BEFORE DISPATCH */}
+            {!dispatched && (
+              <button
+                onClick={handleDispatch}
+                disabled={loading}
+                className="bg-orange-500 text-white px-6 py-2 rounded disabled:opacity-60"
+              >
+                {loading ? "Dispatching..." : "Dispatch Sample"}
+              </button>
+            )}
+
+            {/* AFTER DISPATCH */}
+            {dispatched && (
               <p className="text-green-700 font-medium mt-4">
                 ✅ Sample Dispatched Successfully
               </p>
-
-              <button
-                onClick={() => navigate("/complaint/dashboard")}
-                className="mt-4 bg-blue-600 text-white px-6 py-2 rounded"
-              >
-                Back to Dashboard
-              </button>
-            </>
-          )}
+            )}
+          </div>
 
         </div>
       </div>
