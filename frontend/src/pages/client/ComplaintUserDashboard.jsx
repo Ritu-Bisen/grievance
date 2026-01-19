@@ -8,20 +8,17 @@ export default function ComplaintUserDashboard() {
 
   /* ---------------- STATE ---------------- */
 
-  // Table data
   const [complaints, setComplaints] = useState([]);
 
-  // Filters
   const [complaintCode, setComplaintCode] = useState("");
   const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  // Complaint ID dropdown
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
 
-  /* ---------------- LOAD DATA ---------------- */
+  /* ---------------- LOAD DASHBOARD ---------------- */
 
   const loadDashboard = () => {
     axios
@@ -45,7 +42,7 @@ export default function ComplaintUserDashboard() {
     loadDashboard();
   }, []);
 
-  /* ---------------- CLEAR FILTERS (ADDED) ---------------- */
+  /* ---------------- CLEAR FILTERS ---------------- */
 
   const clearFilters = () => {
     setComplaintCode("");
@@ -55,18 +52,14 @@ export default function ComplaintUserDashboard() {
     setShowDropdown(false);
     setFilteredIds([]);
 
-    // reload full dashboard (no filters)
     axios
       .get("http://localhost:5000/api/grievance/complaint-user/dashboard")
       .then((res) => {
         setComplaints(res.data.complaints || []);
-      })
-      .catch(() => {
-        alert("Failed to load dashboard");
       });
   };
 
-  /* ---------------- COMPLAINT ID DROPDOWN LOGIC ---------------- */
+  /* ---------------- COMPLAINT ID SEARCH ---------------- */
 
   const handleComplaintSearchChange = (value) => {
     setComplaintCode(value);
@@ -88,7 +81,6 @@ export default function ComplaintUserDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* HEADER */}
       <GovHeader>
         <button
           onClick={() => navigate("/complaint/select-type")}
@@ -101,23 +93,20 @@ export default function ComplaintUserDashboard() {
       <div className="max-w-7xl mx-auto p-6">
 
         {/* FILTER CARD */}
-        <div className="bg-white border rounded p-6 mb-6">
+        <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-            {/* Complaint ID with Dropdown */}
+            {/* Complaint ID */}
             <div className="relative">
               <label className="text-sm font-medium">Complaint ID</label>
-
               <input
                 value={complaintCode}
-                onChange={(e) =>
-                  handleComplaintSearchChange(e.target.value)
-                }
+                onChange={(e) => handleComplaintSearchChange(e.target.value)}
                 onFocus={() => {
                   setShowDropdown(true);
                   setFilteredIds(complaints);
                 }}
-                className="border px-3 py-2 w-full rounded"
+                className="border px-3 py-2 w-full rounded bg-white"
                 placeholder="Enter Complaint ID"
               />
 
@@ -139,58 +128,58 @@ export default function ComplaintUserDashboard() {
               )}
             </div>
 
-            {/* Status */}
+            {/* STATUS FILTER */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border px-3 py-2 w-full rounded"
+                className="border px-3 py-2 w-full rounded bg-white"
               >
                 <option value="">All</option>
                 <option value="SUBMITTED">Submitted</option>
-                <option value="IN_PROGRESS">In Progress</option>
+                <option value="SAMPLE_DISPATCHED_FACILITY">Sample Dispatched (Facility)</option>
+                <option value="SAMPLE_RECEIVED_WH">Sample Received (Warehouse)</option>
+                <option value="IN_PROGRESS_WH">In Progress (Warehouse)</option>
+                <option value="REJECTED_WH">Rejected (Warehouse)</option>
+                <option value="SAMPLE_DISPATCHED_WH">Sample Dispatched (Warehouse)</option>
+                <option value="SAMPLE_RECEIVED_QC">Sample Received (QC)</option>
+                <option value="IN_PROGRESS_QC">In Progress (QC)</option>
                 <option value="RESOLVED">Resolved</option>
               </select>
             </div>
 
-            {/* From Date */}
             <div>
               <label className="text-sm font-medium">From Date</label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded"
+                className="border px-3 py-2 w-full rounded bg-white"
               />
             </div>
 
-            {/* To Date */}
             <div>
               <label className="text-sm font-medium">To Date</label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded"
+                className="border px-3 py-2 w-full rounded bg-white"
               />
             </div>
           </div>
 
-          {/* APPLY + CLEAR FILTERS (UPDATED UI, NOTHING REMOVED) */}
           <div className="flex justify-end gap-3 mt-4">
             <button
               onClick={clearFilters}
-              className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+              className="bg-orange-500 text-white px-6 py-2 rounded"
             >
               Clear Filters
             </button>
 
             <button
-              onClick={() => {
-                setShowDropdown(false);
-                loadDashboard();
-              }}
+              onClick={loadDashboard}
               className="bg-orange-500 text-white px-6 py-2 rounded"
             >
               Apply
@@ -212,14 +201,15 @@ export default function ComplaintUserDashboard() {
                 <th className="p-3">Qty</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Date</th>
-                <th className="p-3">Action</th>
+                <th className="p-3">View</th>
+                <th className="p-3">Sample Dispatch</th>
               </tr>
             </thead>
 
             <tbody>
               {complaints.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                  <td colSpan="11" className="p-6 text-center text-gray-500">
                     No complaints found
                   </td>
                 </tr>
@@ -238,15 +228,37 @@ export default function ComplaintUserDashboard() {
                   <td className="p-3">
                     {new Date(c.created_at).toLocaleDateString()}
                   </td>
+
+                  {/* VIEW */}
                   <td className="p-3">
                     <button
                       onClick={() =>
                         navigate(`/complaint/view/${c.complaint_code}`)
                       }
-                      className="text-blue-600 underline"
+                      className="!bg-blue-600 !text-white px-3 py-1 rounded text-xs hover:!bg-blue-700"
                     >
                       View
                     </button>
+                  </td>
+
+                  {/* SAMPLE DISPATCH */}
+                  <td className="p-3">
+                    {c.status === "SUBMITTED" && (
+                      <button
+                        onClick={() =>
+                          navigate(`/complaint/dispatch/${c.complaint_code}`)
+                        }
+                        className="bg-orange-500 text-white px-3 py-1 rounded text-xs"
+                      >
+                        Dispatch Sample
+                      </button>
+                    )}
+
+                    {c.status === "SAMPLE_DISPATCHED_FACILITY" && (
+                      <span className=" text-green-700 px-3 py-1 rounded text-xs font-medium">
+                        Sample Dispatched
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

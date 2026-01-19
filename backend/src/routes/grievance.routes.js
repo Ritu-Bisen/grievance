@@ -5,6 +5,8 @@ import {
   complaintDashboard
 } from "../controllers/grievance.controllers.js";
 import { viewComplaint } from "../controllers/grievance.controllers.js";
+import { dispatchFromFacility } from "../controllers/grievance.controllers.js";
+
 
 
 const router = express.Router();
@@ -38,6 +40,11 @@ router.get("/complaint-user/download/:filename", (req, res) => {
 
   res.download(filePath);
 });
+router.post(
+  "/complaint-user/dispatch-facility",
+  dispatchFromFacility
+);
+
 
 
 export default router;

@@ -164,7 +164,7 @@ function TypeCard({ title, description, onClick, icon: Icon }) {
         flex gap-4
       "
     >
-      <div className="text-3xl  mt-1">
+      <div className="text-3xl mt-1">
         <Icon />
       </div>
 
@@ -207,9 +207,24 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
     b.batchNo.toLowerCase().includes(batchQuery.toLowerCase())
   );
 
-  const handleFileChange = (e) => {
-    setDocuments(Array.from(e.target.files));
-  };
+ const handleFileChange = (e) => {
+  const newFiles = Array.from(e.target.files);
+
+  // combine old + new files
+  const combinedFiles = [...documents, ...newFiles];
+
+  if (combinedFiles.length > 5) {
+    alert("You can upload a maximum of 5 documents only");
+    e.target.value = "";
+    return;
+  }
+
+  setDocuments(combinedFiles);
+  e.target.value = ""; // allow re-selecting same file again
+};
+
+
+
 
   const handleSubmit = async () => {
     try {
@@ -252,7 +267,10 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
       const complaintCode = res.data.complaint_code;
       alert("Complaint submitted successfully");
-      navigate(`/complaint/dispatch/${complaintCode}`);
+
+      // ✅ ONLY CHANGE
+      navigate("/complaint/dashboard");
+
     } catch (err) {
       console.error(err);
       alert("Failed to submit complaint");
@@ -368,22 +386,61 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
         </Section>
 
         <Section title="Upload Supporting Documents">
-          <input
-            type="file"
-            multiple
-            onChange={handleFileChange}
-            className="
-              file:bg-orange-500
-              file:text-white
-              file:px-4
-              file:py-2
-              file:rounded
-              file:border-0
-              hover:file:bg-orange-600
-              cursor-pointer
-            "
-          />
-        </Section>
+  <div className="flex items-center gap-3 flex-wrap">
+    <input
+      type="file"
+      multiple
+      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+      onChange={handleFileChange}
+      className="
+        file:bg-orange-500
+        file:text-white
+        file:px-3
+        file:py-1
+        file:rounded
+        file:border-0
+        hover:file:bg-orange-600
+        cursor-pointer
+      "
+    />
+
+    {/* ✅ SMALL FILE THUMBNAILS (NEAR BUTTON) */}
+    {documents.length > 0 && (
+      <div className="flex gap-2 flex-wrap">
+        {documents.map((file, index) => {
+          const isImage = file.type.startsWith("image/");
+
+          return (
+            <div
+              key={index}
+              className="w-12 border rounded p-0.5 bg-gray-50 text-center"
+            >
+              {isImage ? (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={file.name}
+                  className="w-full h-10 object-cover rounded"
+                />
+              ) : (
+                <div className="h-10 flex items-center justify-center text-lg">
+                  📄
+                </div>
+              )}
+
+              <p
+                className="text-[9px] truncate mt-1"
+                title={file.name}
+              >
+                {file.name}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</Section>
+
 
         <div className="text-right">
           <button
