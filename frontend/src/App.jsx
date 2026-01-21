@@ -6,6 +6,7 @@ import ComplaintUserDashboard from "./pages/client/ComplaintUserDashboard";
 import ComplaintTypeSelection from "./pages/client/ComplaintTypeSelection";
 import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
+import WarehouseSampleReceived from "./pages/warehouse/WarehouseSampleReceived";
 
 import "./App.css";
 
@@ -74,6 +75,10 @@ function App() {
             path="*"
             element={<ComplaintUserDashboard />}
           />
+          <Route
+  path="/warehouse/sample-received/:code"
+  element={<WarehouseSampleReceived />}
+/>
 
         </Routes>
       </BrowserRouter>

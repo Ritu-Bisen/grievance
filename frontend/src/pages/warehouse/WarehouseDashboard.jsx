@@ -19,7 +19,7 @@ export default function WarehouseDashboard() {
   const [complaintCode, setComplaintCode] = useState("");
   const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState(""); // ✅ FIXED
+  const [toDate, setToDate] = useState("");
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
@@ -88,6 +88,21 @@ export default function WarehouseDashboard() {
     setFilteredIds(matches);
   };
 
+  /* ---------------- STATUS CONFIG (🔥 IMPORTANT) ---------------- */
+
+  const SAMPLE_RECEIVED_ALLOWED = [
+    "SAMPLE_DISPATCHED_FACILITY",
+    "SAMPLE_DISPATCHED",
+    "SAMPLE_DISPATCHED_BY_FACILITY"
+  ];
+
+  const DISABLE_WAREHOUSE_ACTION = [
+    "SUBMITTED",
+    "RESOLVED",
+    "SAMPLE_DISPATCHED_WH",
+    "REJECTED_WH"
+  ];
+
   /* ---------------- UI ---------------- */
 
   return (
@@ -124,7 +139,6 @@ export default function WarehouseDashboard() {
               ADR
             </button>
 
-            {/* ✅ FIXED: QUALITY */}
             <button
               onClick={() => loadDashboard("QUALITY")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
@@ -194,6 +208,12 @@ export default function WarehouseDashboard() {
                 </option>
                 <option value="SAMPLE_DISPATCHED_WH">
                   Sample Dispatched (Warehouse)
+                </option>
+                <option value="SAMPLE_RECEIVED_QC">
+                  Sample Received (QC)
+                </option>
+                <option value="IN_PROGRESS_QC">
+                  In Progress (QC)
                 </option>
                 <option value="RESOLVED">Resolved</option>
               </select>
@@ -265,57 +285,71 @@ export default function WarehouseDashboard() {
                 </tr>
               )}
 
-              {complaints.map((c) => (
-                <tr key={c.complaint_code} className="border-t">
-                  <td className="p-3">{c.complaint_code}</td>
-                  <td className="p-3">{c.complaint_type}</td>
-                  <td className="p-3">{c.category}</td>
-                  <td className="p-3">{c.facility_name}</td>
-                  <td className="p-3">{c.item_name}</td>
-                  <td className="p-3">{c.batch_no}</td>
-                  <td className="p-3">{c.warehouse_code}</td>
-                  <td className="p-3">{c.status}</td>
-                  <td className="p-3">
-                    {new Date(c.created_at).toLocaleDateString()}
-                  </td>
+              {complaints.map((c) => {
+                const disableAction = DISABLE_WAREHOUSE_ACTION.includes(c.status);
 
-                  <td className="p-3 space-y-1">
-                    <button
-                      onClick={() =>
-                        navigate(`/complaint/view/${c.complaint_code}`)
-                      }
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs w-full"
-                    >
-                      View (Facility)
-                    </button>
+                return (
+                  <tr key={c.complaint_code} className="border-t">
+                    <td className="p-3">{c.complaint_code}</td>
+                    <td className="p-3">{c.complaint_type}</td>
+                    <td className="p-3">{c.category}</td>
+                    <td className="p-3">{c.facility_name}</td>
+                    <td className="p-3">{c.item_name}</td>
+                    <td className="p-3">{c.batch_no}</td>
+                    <td className="p-3">{c.warehouse_code}</td>
+                    <td className="p-3">{c.status}</td>
+                    <td className="p-3">
+                      {new Date(c.created_at).toLocaleDateString()}
+                    </td>
 
-                    <button
-                      onClick={() =>
-                        navigate(`/warehouse/view/${c.complaint_code}`)
-                      }
-                      className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
-                    >
-                      View (Warehouse)
-                    </button>
-                  </td>
+                    <td className="p-3 space-y-1">
+                      <button
+                        onClick={() =>
+                          navigate(`/complaint/view/${c.complaint_code}`)
+                        }
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-xs w-full"
+                      >
+                        View (Facility)
+                      </button>
 
-                  <td className="p-3">
-                    <button
-                      disabled={c.status !== "IN_PROGRESS_WH"}
-                      onClick={() =>
-                        navigate(`/warehouse/action/${c.complaint_code}`)
-                      }
-                      className={`px-3 py-1 rounded text-xs text-white w-full ${
-                        c.status === "IN_PROGRESS_WH"
-                          ? "bg-orange-500"
-                          : "bg-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Warehouse Action
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <button
+                        onClick={() =>
+                          navigate(`/warehouse/view/${c.complaint_code}`)
+                        }
+                        className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
+                      >
+                        View (Warehouse)
+                      </button>
+                    </td>
+
+                    <td className="p-3">
+                      <button
+                        disabled={disableAction}
+                        onClick={() => {
+                          console.log("STATUS:", c.status);
+
+                          if (SAMPLE_RECEIVED_ALLOWED.includes(c.status)) {
+                            navigate(
+                              `/warehouse/sample-received/${c.complaint_code}`
+                            );
+                          } else {
+                            navigate(
+                              `/warehouse/action/${c.complaint_code}`
+                            );
+                          }
+                        }}
+                        className={`px-3 py-1 rounded text-xs text-white w-full ${
+                          disableAction
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-orange-500"
+                        }`}
+                      >
+                        Warehouse Action
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

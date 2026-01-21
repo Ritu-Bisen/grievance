@@ -8,9 +8,12 @@ import {
   dispatchFromFacility
 } from "../controllers/grievance.controllers.js";
 
+
 import {
-  warehouseDashboard
+  warehouseDashboard,
+  receiveSampleWarehouse
 } from "../controllers/warehouse.controllers.js";
+
 
 import Auth from "../middlewares/Auth.js";
 
@@ -66,5 +69,10 @@ router.get(
   Auth,
   warehouseDashboard
 );
+router.post(
+  "/warehouse/receive-sample",
+  receiveSampleWarehouse
+);
+
 
 export default router;

@@ -290,7 +290,15 @@ export default function ComplaintUserDashboard() {
                       </button>
                     )}
 
-                    {c.status === "SAMPLE_DISPATCHED_FACILITY" && (
+                    {[
+  "SAMPLE_DISPATCHED_FACILITY",
+  "SAMPLE_RECEIVED_WH",
+  "IN_PROGRESS_WH",
+  "SAMPLE_DISPATCHED_WH",
+  "SAMPLE_RECEIVED_QC",
+  "IN_PROGRESS_QC",
+  "RESOLVED"
+].includes(c.status)&& (
                       <span className="text-green-700 text-xs font-medium">
                         Sample Dispatched
                       </span>

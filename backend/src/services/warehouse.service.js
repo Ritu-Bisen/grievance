@@ -1,20 +1,45 @@
 import pool from "../config/db.js";
 
+/* ================= WAREHOUSE DASHBOARD SERVICE ================= */
+
 export const warehouseDashboardService = async (query, user) => {
-  const { complaintCode, status, fromDate, toDate, complaintType } = query;
+  const {
+    complaintCode,
+    status,
+    fromDate,
+    toDate,
+    complaintType
+  } = query;
+
   const { warehouseCode } = user;
 
+  // 🔒 Security check
+  if (!warehouseCode) {
+    throw new Error("Warehouse code missing in user context");
+  }
+
   let sql = `
-    SELECT *
+    SELECT
+      complaint_code,
+      complaint_type,
+      category,
+      facility_name,
+      item_name,
+      batch_no,
+      warehouse_code,
+      status,
+      created_at
     FROM complaints
     WHERE warehouse_code = ?
   `;
 
   const params = [warehouseCode];
 
-  if (complaintType) {
-    sql += " AND complaint_type = ?";
-    params.push(complaintType);
+  /* ---------- OPTIONAL FILTERS ---------- */
+
+  if (complaintCode) {
+    sql += " AND complaint_code LIKE ?";
+    params.push(`%${complaintCode}%`);
   }
 
   if (status) {
@@ -22,9 +47,9 @@ export const warehouseDashboardService = async (query, user) => {
     params.push(status);
   }
 
-  if (complaintCode) {
-    sql += " AND complaint_code LIKE ?";
-    params.push(`%${complaintCode}%`);
+  if (complaintType) {
+    sql += " AND complaint_type = ?";
+    params.push(complaintType);
   }
 
   if (fromDate) {
