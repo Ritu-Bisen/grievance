@@ -87,12 +87,6 @@ export default function WarehouseSampleReceived() {
       <GovHeader />
 
       <div className="max-w-4xl mx-auto bg-white mt-6 p-6 rounded shadow">
-
-        <h2 className="text-xl font-semibold mb-2">
-          Receive Sample – {complaint.complaint_code}
-        </h2>
-
-        {/* Back button */}
         <div className="mb-4">
           <button
             onClick={() => navigate("/warehouse")}
@@ -101,6 +95,13 @@ export default function WarehouseSampleReceived() {
             ← Back to Dashboard
           </button>
         </div>
+
+        <h2 className="text-xl font-semibold mb-2">
+          Receive Sample – {complaint.complaint_code}
+        </h2>
+
+        {/* Back button */}
+        
 
         {/* -------- SAMPLE RECEIPT TIMELINE -------- */}
         <div className="border rounded-lg p-4 mb-6 bg-white">
