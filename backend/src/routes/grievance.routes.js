@@ -1,15 +1,22 @@
 import express from "express";
 import multer from "multer";
+
 import {
   createComplaint,
-  complaintDashboard
+  complaintDashboard,
+  viewComplaint,
+  dispatchFromFacility
 } from "../controllers/grievance.controllers.js";
-import { viewComplaint } from "../controllers/grievance.controllers.js";
-import { dispatchFromFacility } from "../controllers/grievance.controllers.js";
 
+import {
+  warehouseDashboard
+} from "../controllers/warehouse.controllers.js";
 
+import Auth from "../middlewares/Auth.js";
 
 const router = express.Router();
+
+/* ---------------- MULTER ---------------- */
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -19,6 +26,8 @@ const upload = multer({
     }
   })
 });
+
+/* ---------------- FACILITY / COMPLAINT ROUTES ---------------- */
 
 router.post(
   "/complaint-user/create",
@@ -30,21 +39,32 @@ router.get(
   "/complaint-user/view/:code",
   viewComplaint
 );
+
 router.get(
   "/complaint-user/dashboard",
   complaintDashboard
 );
-router.get("/complaint-user/download/:filename", (req, res) => {
-  const { filename } = req.params;
-  const filePath = `uploads/${filename}`;
 
-  res.download(filePath);
-});
+router.get(
+  "/complaint-user/download/:filename",
+  (req, res) => {
+    const { filename } = req.params;
+    const filePath = `uploads/${filename}`;
+    res.download(filePath);
+  }
+);
+
 router.post(
   "/complaint-user/dispatch-facility",
   dispatchFromFacility
 );
 
+/* ---------------- WAREHOUSE ROUTES (ADDED) ---------------- */
 
+router.get(
+  "/warehouse/dashboard",
+  Auth,
+  warehouseDashboard
+);
 
 export default router;

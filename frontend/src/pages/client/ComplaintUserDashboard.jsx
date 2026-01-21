@@ -104,7 +104,7 @@ export default function ComplaintUserDashboard() {
         ">
           {/* LEFT SIDE */}
           <div className="flex items-center gap-3">
-            <FaHospital className="text-green-600 text-2xl" />
+            <FaHospital className="text-green-800 text-2xl" />
             <h2 className="text-lg font-semibold text-gray-800">
               Welcome to Facility Dashboard
             </h2>

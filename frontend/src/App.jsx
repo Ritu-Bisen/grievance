@@ -23,10 +23,21 @@ function App() {
             element={<Navigate to="/complaint/dashboard" replace />}
           />
 
-          {/* Warehouse */}
+          {/* Warehouse Dashboard */}
           <Route
             path="/warehouse"
             element={<WarehouseDashboard />}
+          />
+
+          {/* Warehouse View / Action */}
+          <Route
+            path="/warehouse/view/:code"
+            element={<ComplaintView mode="WAREHOUSE_VIEW" />}
+          />
+
+          <Route
+            path="/warehouse/action/:code"
+            element={<ComplaintView mode="WAREHOUSE_ACTION" />}
           />
 
           {/* Complaint User Dashboard */}
@@ -35,7 +46,6 @@ function App() {
             element={<ComplaintUserDashboard />}
           />
 
-          {/* Optional Alias */}
           <Route
             path="/complaint-user/dashboard"
             element={<Navigate to="/complaint/dashboard" replace />}
@@ -47,10 +57,10 @@ function App() {
             element={<ComplaintTypeSelection />}
           />
 
-          {/* View Complaint */}
+          {/* Facility View */}
           <Route
             path="/complaint/view/:code"
-            element={<ComplaintView />}
+            element={<ComplaintView mode="FACILITY" />}
           />
 
           {/* Dispatch */}
@@ -59,7 +69,7 @@ function App() {
             element={<DispatchSample />}
           />
 
-          {/* Fallback (404) */}
+          {/* Fallback */}
           <Route
             path="*"
             element={<ComplaintUserDashboard />}
