@@ -3,6 +3,8 @@ import {
   createComplaintService,
   dashboardService
 } from "../services/grievance.service.js";
+import { dispatchFromFacilityService } from "../services/grievance.service.js";
+
 
 export const createComplaint = async (req, res) => {
   console.log("🔥 CREATE COMPLAINT API HIT");
@@ -58,3 +60,19 @@ export const viewComplaint = async (req, res) => {
 
   res.json(rows[0]);
 };
+export const dispatchFromFacility = async (req, res) => {
+  try {
+    const { complaint_code } = req.body;
+
+    await dispatchFromFacilityService(complaint_code);
+
+    res.json({
+      message: "Sample dispatched from facility successfully"
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: err.message
+    });
+  }
+};
+

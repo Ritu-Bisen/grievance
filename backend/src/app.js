@@ -4,16 +4,28 @@ import grievanceRoutes from "./routes/grievance.routes.js";
 
 const app = express();
 
-/* 🔥 ENABLE CORS */
+/* CORS */
 app.use(cors({
-  origin: ["http://localhost:3000","https://stnjr6z8-5000.euw.devtunnels.ms","http://localhost:5173"],// or 5173 if Vite
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173"
+  ],
   credentials: true
 }));
 
 app.use(express.json());
+
+/* 🔥 DISABLE CACHE (MANDATORY) */
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 app.use("/uploads", express.static("uploads"));
 app.use("/api/grievance", grievanceRoutes);
+
 app.get("/", (req, res) => {
   res.send("Backend working");
 });

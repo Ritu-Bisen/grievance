@@ -6,6 +6,8 @@ import ComplaintUserDashboard from "./pages/client/ComplaintUserDashboard";
 import ComplaintTypeSelection from "./pages/client/ComplaintTypeSelection";
 import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
+import WarehouseSampleReceived from "./pages/warehouse/WarehouseSampleReceived";
+import WarehouseApproveReject from "./pages/warehouse/WarehouseApproveReject";
 
 import "./App.css";
 
@@ -23,10 +25,33 @@ function App() {
             element={<Navigate to="/complaint/dashboard" replace />}
           />
 
-          {/* Warehouse */}
+          {/* Warehouse Dashboard */}
           <Route
             path="/warehouse"
             element={<WarehouseDashboard />}
+          />
+
+          {/* Warehouse View / Action */}
+          <Route
+            path="/warehouse/view/:code"
+            element={<ComplaintView mode="WAREHOUSE_VIEW" />}
+          />
+
+          <Route
+            path="/warehouse/action/:code"
+            element={<ComplaintView mode="WAREHOUSE_ACTION" />}
+          />
+
+          {/* 🔥 Sample Received */}
+          <Route
+            path="/warehouse/sample-received/:code"
+            element={<WarehouseSampleReceived />}
+          />
+
+          {/* 🔥 Approve / Reject */}
+          <Route
+            path="/warehouse/approve-reject/:code"
+            element={<WarehouseApproveReject />}
           />
 
           {/* Complaint User Dashboard */}
@@ -35,7 +60,6 @@ function App() {
             element={<ComplaintUserDashboard />}
           />
 
-          {/* Optional Alias */}
           <Route
             path="/complaint-user/dashboard"
             element={<Navigate to="/complaint/dashboard" replace />}
@@ -47,10 +71,10 @@ function App() {
             element={<ComplaintTypeSelection />}
           />
 
-          {/* View Complaint */}
+          {/* Facility View */}
           <Route
             path="/complaint/view/:code"
-            element={<ComplaintView />}
+            element={<ComplaintView mode="FACILITY" />}
           />
 
           {/* Dispatch */}
@@ -59,7 +83,7 @@ function App() {
             element={<DispatchSample />}
           />
 
-          {/* Fallback (404) */}
+          {/* Fallback */}
           <Route
             path="*"
             element={<ComplaintUserDashboard />}

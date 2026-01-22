@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import GovHeader from "../../components/GovHeader";
 
+/* 🔹 ICONS */
+import { FaBoxOpen, FaHeartbeat, FaExclamationTriangle } from "react-icons/fa";
+
 /* ---------------- MOCK DATA (TEMP) ---------------- */
 
 const facilities = [
@@ -94,16 +97,19 @@ export default function ComplaintTypeSelection() {
           <TypeCard
             title="Physical Damage"
             description="Damage to packaging, bottle, label, seal, or container"
+            icon={FaBoxOpen}
             onClick={() => setSelectedType("PHYSICAL")}
           />
           <TypeCard
             title="ADR Reaction"
             description="Adverse drug reactions or side effects"
+            icon={FaHeartbeat}
             onClick={() => setSelectedType("ADR")}
           />
           <TypeCard
             title="Poor Quality"
             description="Quality issues like contamination or potency"
+            icon={FaExclamationTriangle}
             onClick={() => setSelectedType("QUALITY")}
           />
         </div>
@@ -139,16 +145,33 @@ export default function ComplaintTypeSelection() {
   );
 }
 
-/* ---------------- TYPE CARD ---------------- */
+/* ---------------- TYPE CARD (COLOR + ICONS) ---------------- */
 
-function TypeCard({ title, description, onClick }) {
+function TypeCard({ title, description, onClick, icon: Icon }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white border rounded p-5 cursor-pointer hover:shadow-md transition"
+      className="
+        bg-green-700
+        border border-green-800
+        rounded
+        p-5
+        cursor-pointer
+        hover:bg-green-800
+        hover:shadow-md
+        transition
+        text-white
+        flex gap-4
+      "
     >
-      <h3 className="font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
+      <div className="text-3xl mt-1">
+        <Icon />
+      </div>
+
+      <div>
+        <h3 className="font-semibold mb-2">{title}</h3>
+        <p className="text-sm text-green-100">{description}</p>
+      </div>
     </div>
   );
 }
@@ -184,13 +207,36 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
     b.batchNo.toLowerCase().includes(batchQuery.toLowerCase())
   );
 
-  const handleFileChange = (e) => {
-    setDocuments(Array.from(e.target.files));
-  };
+ const handleFileChange = (e) => {
+  const newFiles = Array.from(e.target.files);
+
+  // combine old + new files
+  const combinedFiles = [...documents, ...newFiles];
+
+  if (combinedFiles.length > 5) {
+    alert("You can upload a maximum of 5 documents only");
+    e.target.value = "";
+    return;
+  }
+
+  setDocuments(combinedFiles);
+  e.target.value = ""; // allow re-selecting same file again
+};
+
+
+
 
   const handleSubmit = async () => {
     try {
-      if (!facility || !item || !batch || !category || !qty || !description.trim()) {
+      if (
+        !facility ||
+        !item ||
+        !batch ||
+        !category ||
+        !qty ||
+        !description.trim() ||
+        documents.length === 0
+      ) {
         alert("Please fill all mandatory fields");
         return;
       }
@@ -214,17 +260,16 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
       });
 
       const res = await axios.post(
-  "http://localhost:5000/api/grievance/complaint-user/create",
-  formData,
-  { headers: { "Content-Type": "multipart/form-data" } }
-);
+        "http://localhost:5000/api/grievance/complaint-user/create",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
-// 🔹 get complaint code returned by backend
-const complaintCode = res.data.complaint_code;
+      const complaintCode = res.data.complaint_code;
+      alert("Complaint submitted successfully");
 
-// 🔹 redirect to Dispatch Sample page
-alert("Complaint submitted successfully");
-navigate(`/complaint/dispatch/${complaintCode}`);
+      // ✅ ONLY CHANGE
+      navigate("/complaint/dashboard");
 
     } catch (err) {
       console.error(err);
@@ -341,8 +386,61 @@ navigate(`/complaint/dispatch/${complaintCode}`);
         </Section>
 
         <Section title="Upload Supporting Documents">
-          <input type="file" multiple onChange={handleFileChange} />
-        </Section>
+  <div className="flex items-center gap-3 flex-wrap">
+    <input
+      type="file"
+      multiple
+      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+      onChange={handleFileChange}
+      className="
+        file:bg-orange-500
+        file:text-white
+        file:px-3
+        file:py-1
+        file:rounded
+        file:border-0
+        hover:file:bg-orange-600
+        cursor-pointer
+      "
+    />
+
+    {/* ✅ SMALL FILE THUMBNAILS (NEAR BUTTON) */}
+    {documents.length > 0 && (
+      <div className="flex gap-2 flex-wrap">
+        {documents.map((file, index) => {
+          const isImage = file.type.startsWith("image/");
+
+          return (
+            <div
+              key={index}
+              className="w-12 border rounded p-0.5 bg-gray-50 text-center"
+            >
+              {isImage ? (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={file.name}
+                  className="w-full h-10 object-cover rounded"
+                />
+              ) : (
+                <div className="h-10 flex items-center justify-center text-lg">
+                  📄
+                </div>
+              )}
+
+              <p
+                className="text-[9px] truncate mt-1"
+                title={file.name}
+              >
+                {file.name}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</Section>
+
 
         <div className="text-right">
           <button

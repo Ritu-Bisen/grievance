@@ -67,4 +67,25 @@ export const dashboardService = async (filters) => {
   const [rows] = await pool.execute(sql, params);
   return rows;
 };
+export const dispatchFromFacilityService = async (complaintCode) => {
+  // get current status
+  const [rows] = await pool.execute(
+    "SELECT status FROM complaints WHERE complaint_code = ?",
+    [complaintCode]
+  );
+
+  if (rows.length === 0) {
+    throw new Error("Complaint not found");
+  }
+
+  if (rows[0].status !== "SUBMITTED") {
+    throw new Error("Dispatch not allowed");
+  }
+
+  // update status
+  await pool.execute(
+    "UPDATE complaints SET status = ? WHERE complaint_code = ?",
+    ["SAMPLE_DISPATCHED_FACILITY", complaintCode]
+  );
+};
 
