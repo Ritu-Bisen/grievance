@@ -4,9 +4,7 @@ import axios from "axios";
 import GovHeader from "../../components/GovHeader";
 import {
   FaWarehouse,
-  FaBoxOpen,
-  FaExclamationTriangle,
-  FaFlask
+  FaBoxOpen, FaHeartbeat, FaExclamationTriangle
 } from "react-icons/fa";
 
 export default function WarehouseDashboard() {
@@ -135,7 +133,7 @@ export default function WarehouseDashboard() {
               onClick={() => loadDashboard("ADR")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
             >
-              <FaExclamationTriangle />
+              <FaHeartbeat />
               ADR
             </button>
 
@@ -143,7 +141,7 @@ export default function WarehouseDashboard() {
               onClick={() => loadDashboard("QUALITY")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
             >
-              <FaFlask />
+              <FaExclamationTriangle />
               Poor Quality
             </button>
 
