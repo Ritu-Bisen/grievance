@@ -297,7 +297,7 @@ export default function ComplaintUserDashboard() {
   "SAMPLE_DISPATCHED_WH",
   "SAMPLE_RECEIVED_QC",
   "IN_PROGRESS_QC",
-  "RESOLVED"
+  "RESOLVED","REJECTED_WH"
 ].includes(c.status)&& (
                       <span className="text-green-700 text-xs font-medium">
                         Sample Dispatched

@@ -9,6 +9,7 @@ export default function WarehouseApproveReject() {
 
   const [complaint, setComplaint] = useState(null);
   const [isRejected, setIsRejected] = useState(false);
+  const [showApproveSuccess, setShowApproveSuccess] = useState(false);
 
   /* ---------------- LOAD COMPLAINT ---------------- */
   useEffect(() => {
@@ -25,22 +26,24 @@ export default function WarehouseApproveReject() {
       { complaint_code: code }
     );
 
-    navigate("/warehouse");
+    // update UI instantly
+    setComplaint((prev) => ({
+      ...prev,
+      status: "IN_PROGRESS_WH"
+    }));
+
+    // show success page (same like sample receive)
+    setShowApproveSuccess(true);
   };
 
   /* ---------------- REJECT ---------------- */
   const handleReject = async () => {
-    try {
-      await axios.post(
-        "http://localhost:5000/api/grievance/warehouse/reject",
-        { complaint_code: code }
-      );
-    } catch (err) {
-      // backend fail ho to bhi UI ka flow rukna nahi chahiye
-      console.log("Reject API failed, updating UI only");
-    }
+    await axios.post(
+      "http://localhost:5000/api/grievance/warehouse/reject",
+      { complaint_code: code }
+    );
 
-    // 🔥 YAHI MAIN FIX HAI
+    // update UI instantly
     setComplaint((prev) => ({
       ...prev,
       status: "REJECTED_WH"
@@ -51,7 +54,6 @@ export default function WarehouseApproveReject() {
 
   if (!complaint) return null;
 
-  /* ---------------- UI ---------------- */
   return (
     <div className="min-h-screen bg-gray-100">
       <GovHeader />
@@ -71,14 +73,24 @@ export default function WarehouseApproveReject() {
           <div><b>Batch:</b> {complaint.batch_no}</div>
           <div>
             <b>Status:</b>{" "}
-            <span className={complaint.status === "REJECTED_WH" ? "text-red-600 font-semibold" : ""}>
+            <span
+              className={
+                complaint.status === "REJECTED_WH"
+                  ? "text-red-600 font-semibold"
+                  : complaint.status === "IN_PROGRESS_WH"
+                  ? "text-green-700 font-semibold"
+                  : ""
+              }
+            >
               {complaint.status}
             </span>
           </div>
         </div>
 
-        {/* ACTION AREA */}
-        {!isRejected ? (
+        {/* ---------------- ACTION AREA ---------------- */}
+
+        {/* NORMAL STATE */}
+        {!isRejected && !showApproveSuccess && (
           <div className="flex gap-6">
             <button
               onClick={handleApprove}
@@ -94,7 +106,10 @@ export default function WarehouseApproveReject() {
               Reject
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* REJECTED STATE */}
+        {isRejected && (
           <div className="text-center">
             <h3 className="text-red-600 font-semibold text-lg mb-4">
               ❌ Complaint Rejected
@@ -106,6 +121,35 @@ export default function WarehouseApproveReject() {
             >
               Back to Dashboard
             </button>
+          </div>
+        )}
+
+        {/* APPROVE SUCCESS STATE (SAME AS SAMPLE RECEIVE) */}
+        {showApproveSuccess && (
+          <div className="text-center">
+            <h3 className="text-green-700 font-semibold text-lg mb-4">
+              ✅ Complaint Approved Successfully
+            </h3>
+
+            <p className="text-sm mb-6">
+              Status moved to <b>IN_PROGRESS_WH</b>
+            </p>
+
+            <div className="flex justify-center gap-6">
+              <button
+                onClick={() => navigate("/warehouse")}
+                className="px-6 py-2 bg-gray-500 text-white rounded"
+              >
+                Back to Dashboard
+              </button>
+
+              <button
+                onClick={() => navigate(`/warehouse/action/${code}`)}
+                className="px-6 py-2 bg-green-600 text-white rounded"
+              >
+                Next Stage
+              </button>
+            </div>
           </div>
         )}
       </div>
