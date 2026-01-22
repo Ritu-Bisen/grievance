@@ -8,12 +8,12 @@ import {
   dispatchFromFacility
 } from "../controllers/grievance.controllers.js";
 
-
 import {
   warehouseDashboard,
-  receiveSampleWarehouse
+  receiveSampleWarehouse,
+  approveWarehouse,
+  rejectWarehouse
 } from "../controllers/warehouse.controllers.js";
-
 
 import Auth from "../middlewares/Auth.js";
 
@@ -32,22 +32,26 @@ const upload = multer({
 
 /* ---------------- FACILITY / COMPLAINT ROUTES ---------------- */
 
+// Create complaint
 router.post(
   "/complaint-user/create",
   upload.array("documents"),
   createComplaint
 );
 
+// View complaint
 router.get(
   "/complaint-user/view/:code",
   viewComplaint
 );
 
+// Complaint dashboard (user)
 router.get(
   "/complaint-user/dashboard",
   complaintDashboard
 );
 
+// Download uploaded file
 router.get(
   "/complaint-user/download/:filename",
   (req, res) => {
@@ -57,22 +61,37 @@ router.get(
   }
 );
 
+// Dispatch sample from facility
 router.post(
   "/complaint-user/dispatch-facility",
   dispatchFromFacility
 );
 
-/* ---------------- WAREHOUSE ROUTES (ADDED) ---------------- */
+/* ---------------- WAREHOUSE ROUTES ---------------- */
 
+// Warehouse dashboard
 router.get(
   "/warehouse/dashboard",
   Auth,
   warehouseDashboard
 );
+
+// Receive sample at warehouse
 router.post(
   "/warehouse/receive-sample",
   receiveSampleWarehouse
 );
 
+// ✅ FIXED: Approve complaint (warehouse)
+router.post(
+  "/warehouse/approve",
+  approveWarehouse
+);
+
+// ✅ FIXED: Reject complaint (warehouse)
+router.post(
+  "/warehouse/reject",
+  rejectWarehouse
+);
 
 export default router;

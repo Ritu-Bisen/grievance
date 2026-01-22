@@ -7,6 +7,7 @@ import ComplaintTypeSelection from "./pages/client/ComplaintTypeSelection";
 import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
 import WarehouseSampleReceived from "./pages/warehouse/WarehouseSampleReceived";
+import WarehouseApproveReject from "./pages/warehouse/WarehouseApproveReject";
 
 import "./App.css";
 
@@ -39,6 +40,18 @@ function App() {
           <Route
             path="/warehouse/action/:code"
             element={<ComplaintView mode="WAREHOUSE_ACTION" />}
+          />
+
+          {/* 🔥 Sample Received */}
+          <Route
+            path="/warehouse/sample-received/:code"
+            element={<WarehouseSampleReceived />}
+          />
+
+          {/* 🔥 Approve / Reject */}
+          <Route
+            path="/warehouse/approve-reject/:code"
+            element={<WarehouseApproveReject />}
           />
 
           {/* Complaint User Dashboard */}
@@ -75,10 +88,6 @@ function App() {
             path="*"
             element={<ComplaintUserDashboard />}
           />
-          <Route
-  path="/warehouse/sample-received/:code"
-  element={<WarehouseSampleReceived />}
-/>
 
         </Routes>
       </BrowserRouter>

@@ -332,7 +332,12 @@ export default function WarehouseDashboard() {
                             navigate(
                               `/warehouse/sample-received/${c.complaint_code}`
                             );
-                          } else {
+
+                          }
+                          else if (c.status === "SAMPLE_RECEIVED_WH") {
+                                 navigate(`/warehouse/approve-reject/${c.complaint_code}`);0
+                          }  
+                          else {
                             navigate(
                               `/warehouse/action/${c.complaint_code}`
                             );

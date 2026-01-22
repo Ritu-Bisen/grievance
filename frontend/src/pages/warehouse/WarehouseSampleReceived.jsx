@@ -168,9 +168,11 @@ export default function WarehouseSampleReceived() {
                 </button>
 
                 <button
-                  onClick={() => navigate(`/warehouse/action/${code}`)}
-                  className="px-4 py-2 bg-green-600 text-white rounded"
+                  
+                 onClick={() => navigate(`/warehouse/approve-reject/${code}`)}
+                className="px-4 py-2 bg-green-600 text-white rounded"
                 >
+
                   Next Stage
                 </button>
               </div>
