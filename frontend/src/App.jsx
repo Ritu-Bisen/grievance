@@ -6,8 +6,17 @@ import ComplaintUserDashboard from "./pages/client/ComplaintUserDashboard";
 import ComplaintTypeSelection from "./pages/client/ComplaintTypeSelection";
 import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
+
 import WarehouseSampleReceived from "./pages/warehouse/WarehouseSampleReceived";
 import WarehouseApproveReject from "./pages/warehouse/WarehouseApproveReject";
+import WarehouseActionRedirect from "./pages/warehouse/WarehouseActionRedirect";
+
+import PhysicalAssessmentPage from "./pages/warehouse/PhysicalAssessmentPage";
+import ADRAssessmentPage from "./pages/warehouse/ADRAssessmentPage";
+import QualityAssessmentPage from "./pages/warehouse/QualityAssessmentPage";
+import WarehouseAssessmentView from
+  "./pages/warehouse/WarehouseAssessmentView";
+
 
 import "./App.css";
 
@@ -31,15 +40,16 @@ function App() {
             element={<WarehouseDashboard />}
           />
 
-          {/* Warehouse View / Action */}
+          {/* Warehouse View */}
           <Route
             path="/warehouse/view/:code"
             element={<ComplaintView mode="WAREHOUSE_VIEW" />}
           />
 
+          {/* 🔥 Warehouse Action (TYPE DECIDER ONLY) */}
           <Route
             path="/warehouse/action/:code"
-            element={<ComplaintView mode="WAREHOUSE_ACTION" />}
+            element={<WarehouseActionRedirect />}
           />
 
           {/* 🔥 Sample Received */}
@@ -52,6 +62,20 @@ function App() {
           <Route
             path="/warehouse/approve-reject/:code"
             element={<WarehouseApproveReject />}
+          />
+
+          {/* 🔥 Assessment Pages */}
+          <Route
+            path="/warehouse/action/physical/:code"
+            element={<PhysicalAssessmentPage />}
+          />
+          <Route
+            path="/warehouse/action/adr/:code"
+            element={<ADRAssessmentPage />}
+          />
+          <Route
+            path="/warehouse/action/quality/:code"
+            element={<QualityAssessmentPage />}
           />
 
           {/* Complaint User Dashboard */}
@@ -88,6 +112,11 @@ function App() {
             path="*"
             element={<ComplaintUserDashboard />}
           />
+          <Route
+            path="/warehouse/assessment/view/:code"
+            element={<WarehouseAssessmentView />}
+          />
+
 
         </Routes>
       </BrowserRouter>

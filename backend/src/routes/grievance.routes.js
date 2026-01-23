@@ -12,14 +12,19 @@ import {
   warehouseDashboard,
   receiveSampleWarehouse,
   approveWarehouse,
-  rejectWarehouse
+  rejectWarehouse,
+  submitWarehouseAssessment,
+  viewWarehouseAssessment
 } from "../controllers/warehouse.controllers.js";
 
-import Auth from "../middlewares/Auth.js";
+import { assessmentUpload } from "../middlewares/assessmentUpload.js";
+import Auth from "../middlewares/Auth.js";   // ✅ REQUIRED for dashboard
 
 const router = express.Router();
 
-/* ---------------- MULTER ---------------- */
+/* ============================================================= */
+/*                   MULTER (COMPLAINT DOCS)                     */
+/* ============================================================= */
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -30,16 +35,18 @@ const upload = multer({
   })
 });
 
-/* ---------------- FACILITY / COMPLAINT ROUTES ---------------- */
+/* ============================================================= */
+/*                 FACILITY / COMPLAINT ROUTES                   */
+/* ============================================================= */
 
-// Create complaint
+// Create complaint (with documents)
 router.post(
   "/complaint-user/create",
   upload.array("documents"),
   createComplaint
 );
 
-// View complaint
+// View complaint (details + documents)
 router.get(
   "/complaint-user/view/:code",
   viewComplaint
@@ -51,7 +58,7 @@ router.get(
   complaintDashboard
 );
 
-// Download uploaded file
+// Download complaint document
 router.get(
   "/complaint-user/download/:filename",
   (req, res) => {
@@ -67,31 +74,52 @@ router.post(
   dispatchFromFacility
 );
 
-/* ---------------- WAREHOUSE ROUTES ---------------- */
+/* ============================================================= */
+/*                     WAREHOUSE ROUTES                          */
+/* ============================================================= */
 
-// Warehouse dashboard
+// ✅ Warehouse dashboard (Auth REQUIRED)
 router.get(
   "/warehouse/dashboard",
   Auth,
   warehouseDashboard
 );
 
-// Receive sample at warehouse
+// ✅ Receive sample at warehouse (NO Auth – as per your flow)
 router.post(
   "/warehouse/receive-sample",
   receiveSampleWarehouse
 );
 
-// ✅ FIXED: Approve complaint (warehouse)
+// Approve complaint (warehouse)
 router.post(
   "/warehouse/approve",
   approveWarehouse
 );
 
-// ✅ FIXED: Reject complaint (warehouse)
+// Reject complaint (warehouse)
 router.post(
   "/warehouse/reject",
   rejectWarehouse
+);
+
+/* ============================================================= */
+/*                 WAREHOUSE ASSESSMENT ROUTES                   */
+/* ============================================================= */
+
+// Submit warehouse assessment (PHYSICAL / ADR / QUALITY)
+// max 5 documents
+router.post(
+  "/warehouse/assessment/submit",
+  assessmentUpload.array("documents", 5),
+  submitWarehouseAssessment
+);
+
+// View warehouse assessment
+// (complaint details + assessment + uploaded documents)
+router.get(
+  "/warehouse/assessment/view/:complaintCode",
+  viewWarehouseAssessment
 );
 
 export default router;

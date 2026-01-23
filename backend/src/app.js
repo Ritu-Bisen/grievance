@@ -23,7 +23,11 @@ app.use((req, res, next) => {
   next();
 });
 
+/* 🔥 STATIC FILES */
 app.use("/uploads", express.static("uploads"));
+app.use("/uploads/assessment", express.static("uploads/assessment"));
+
+/* ROUTES */
 app.use("/api/grievance", grievanceRoutes);
 
 app.get("/", (req, res) => {
