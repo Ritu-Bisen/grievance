@@ -11,6 +11,9 @@ export default function WarehouseAssessmentView() {
   const [complaint, setComplaint] = useState(null);
   const [assessment, setAssessment] = useState(null);
 
+  /* 🖼 PREVIEW STATE (image / pdf / doc) */
+  const [previewFile, setPreviewFile] = useState(null);
+
   useEffect(() => {
     axios
       .get(
@@ -19,10 +22,94 @@ export default function WarehouseAssessmentView() {
       .then(res => {
         setComplaint(res.data.complaint);
         setAssessment(res.data.assessment);
-      });
+      })
+      .catch(() => alert("Failed to load warehouse assessment"));
   }, [code]);
 
   if (!complaint) return null;
+
+  /* ---------- FILE TYPE CHECK ---------- */
+  const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
+  const isPDF = (name) => /\.pdf$/i.test(name);
+
+  /* ================= CSV DOWNLOAD ================= */
+  const downloadCSV = () => {
+    if (!assessment) return;
+
+    const complaintRows = [
+      ["COMPLAINT", "Complaint Code", complaint.complaint_code],
+      ["COMPLAINT", "Type", complaint.complaint_type],
+      ["COMPLAINT", "Category", complaint.category],
+      ["COMPLAINT", "Facility", complaint.facility_name],
+      ["COMPLAINT", "Item Name", complaint.item_name],
+      ["COMPLAINT", "Item Code", complaint.item_code],
+      ["COMPLAINT", "Batch No", complaint.batch_no],
+      ["COMPLAINT", "Status", complaint.status],
+    ];
+
+    let assessmentRows = [];
+
+    if (assessment.assessment_type === "PHYSICAL") {
+      assessmentRows = [
+        ["ASSESSMENT", "Assessment Type", "PHYSICAL"],
+        ["ASSESSMENT", "Tender No", assessment.tender_no],
+        ["ASSESSMENT", "PO No", assessment.po_no],
+        ["ASSESSMENT", "Stock (Warehouse)", assessment.stock_warehouse],
+        ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
+        ["ASSESSMENT", "Total Stock", assessment.total_stock],
+        ["ASSESSMENT", "Remarks", assessment.remarks],
+      ];
+    }
+
+    if (assessment.assessment_type === "ADR") {
+      assessmentRows = [
+        ["ASSESSMENT", "Assessment Type", "ADR"],
+        ["ASSESSMENT", "Tender No", assessment.tender_no],
+        ["ASSESSMENT", "PO No", assessment.po_no],
+        ["ASSESSMENT", "Stock (Warehouse)", assessment.stock_warehouse],
+        ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
+        ["ASSESSMENT", "Total Stock", assessment.total_stock],
+        ["ASSESSMENT", "ADR Severity", assessment.adr_severity],
+        ["ASSESSMENT", "Remarks", assessment.remarks],
+      ];
+    }
+
+    if (assessment.assessment_type === "QUALITY") {
+      assessmentRows = [
+        ["ASSESSMENT", "Assessment Type", "QUALITY"],
+        ["ASSESSMENT", "Tender No", assessment.tender_no],
+        ["ASSESSMENT", "PO No", assessment.po_no],
+        ["ASSESSMENT", "Stock (Warehouse)", assessment.stock_warehouse],
+        ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
+        ["ASSESSMENT", "Total Stock", assessment.total_stock],
+        ["ASSESSMENT", "Quality Description", assessment.quality_description],
+        ["ASSESSMENT", "Remarks", assessment.remarks],
+      ];
+    }
+
+    const rows = [
+      ["SECTION", "FIELD", "VALUE"],
+      ...complaintRows,
+      ...assessmentRows,
+    ];
+
+    const csvContent = rows
+      .map(r =>
+        r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `warehouse_assessment_${complaint.complaint_code}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -30,19 +117,29 @@ export default function WarehouseAssessmentView() {
 
       <div className="max-w-6xl mx-auto bg-white mt-6 p-6 rounded shadow">
 
-        
-
-        {/* 🔝 COMPLAINT DETAILS + DOCUMENTS */}
+        {/* 🔝 COMPLAINT TOP (UNCHANGED) */}
         <ComplaintTopSection complaint={complaint} />
 
         {/* ================= ASSESSMENT DETAILS ================= */}
         {assessment ? (
           <div className="border rounded p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Warehouse Assessment Details
-            </h3>
 
-            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Warehouse Assessment Details
+              </h3>
+
+              <button
+                onClick={downloadCSV}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                Download CSV
+              </button>
+            </div>
+
+            {/* DETAILS */}
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div><b>Assessment Type:</b> {assessment.assessment_type}</div>
               <div><b>Item Code:</b> {assessment.item_code}</div>
               <div><b>Batch No:</b> {assessment.batch_no}</div>
@@ -71,31 +168,45 @@ export default function WarehouseAssessmentView() {
               )}
             </div>
 
-            {/* 📄 ASSESSMENT DOCUMENTS */}
+            {/* ================= DOCUMENTS ================= */}
             <div>
-              <h4 className="font-semibold mb-2">
-                Assessment Documents
-              </h4>
+              <h4 className="font-semibold mb-3">Assessment Documents</h4>
 
               {assessment.documents?.length > 0 ? (
-                <ul className="space-y-2 text-sm">
-                  {assessment.documents.map((doc, i) => (
-                    <li
-                      key={i}
-                      className="flex justify-between items-center border-b pb-1"
+                <div className="space-y-2">
+                  {assessment.documents.map((doc, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center border px-4 py-2 rounded"
                     >
-                      <span>{doc.original_name}</span>
-                      <a
-                        href={`http://localhost:5000/uploads/assessment/${doc.file_name}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 underline"
-                      >
-                        View
-                      </a>
-                    </li>
+                      <span className="text-sm text-gray-700">
+                        {doc.original_name}
+                      </span>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() =>
+                            setPreviewFile({
+                              url: `http://localhost:5000/uploads/assessment/${doc.file_name}`,
+                              name: doc.file_name,
+                            })
+                          }
+                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                        >
+                          View
+                        </button>
+
+                        <a
+                          href={`http://localhost:5000/uploads/assessment/${doc.file_name}`}
+                          download
+                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : (
                 <p className="text-sm text-gray-500">
                   No assessment documents uploaded
@@ -104,12 +215,47 @@ export default function WarehouseAssessmentView() {
             </div>
           </div>
         ) : (
-          <p className="text-gray-500">
-            Assessment not submitted yet
-          </p>
+          <p className="text-gray-500">Assessment not submitted yet</p>
         )}
-
       </div>
+
+      {/* ================= PREVIEW MODAL ================= */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded max-w-4xl w-full">
+
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="flex justify-center">
+              {isImage(previewFile.name) ? (
+                <img
+                  src={previewFile.url}
+                  alt="Preview"
+                  className="max-h-[75vh] object-contain"
+                />
+              ) : isPDF(previewFile.name) ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-[75vh]"
+                  title="PDF Preview"
+                />
+              ) : (
+                <p className="text-gray-600">
+                  Preview not supported. Please download the file.
+                </p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,8 +8,8 @@ export default function ComplaintView() {
   const navigate = useNavigate();
   const [complaint, setComplaint] = useState(null);
 
-  /* ---------- IMAGE PREVIEW STATE ---------- */
-  const [previewImage, setPreviewImage] = useState(null);
+  /* ---------- PREVIEW STATE ---------- */
+  const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
     axios
@@ -20,12 +20,23 @@ export default function ComplaintView() {
 
   if (!complaint) return null;
 
-  /* ---------------- HELPER: CHECK IMAGE FILE ---------------- */
-  const isImageFile = (filename) => {
-    return /\.(jpg|jpeg|png|webp)$/i.test(filename);
+  /* ---------- FILE HELPERS ---------- */
+  const getFileName = (doc) => {
+    if (typeof doc === "string") return doc.split("-").slice(1).join("-");
+    return doc.original_name;
   };
 
-  /* ---------------- DOWNLOAD DETAILS AS CSV ---------------- */
+  const getFilePath = (doc) => {
+    if (typeof doc === "string") return doc;
+    return doc.file_name;
+  };
+
+  const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
+  const isPDF = (name) => /\.pdf$/i.test(name);
+  const isText = (name) => /\.(txt|csv)$/i.test(name);
+  const isDoc = (name) => /\.(doc|docx)$/i.test(name);
+
+  /* ---------- CSV DOWNLOAD (UNCHANGED) ---------- */
   const downloadCSV = () => {
     const rows = [
       ["Field", "Value"],
@@ -66,7 +77,8 @@ export default function ComplaintView() {
       <GovHeader />
 
       <div className="max-w-5xl mx-auto bg-white p-6 mt-6 border rounded">
-        {/* ---------------- HEADER ---------------- */}
+
+        {/* ---------- HEADER (UNCHANGED) ---------- */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Complaint Details</h2>
 
@@ -87,7 +99,7 @@ export default function ComplaintView() {
           </div>
         </div>
 
-        {/* ---------------- COMPLAINT DETAILS ---------------- */}
+        {/* ---------- DETAILS (UNCHANGED) ---------- */}
         {Object.entries({
           "Complaint Code": complaint.complaint_code,
           "Type": complaint.complaint_type,
@@ -108,75 +120,99 @@ export default function ComplaintView() {
           </div>
         ))}
 
-        {/* ---------------- DOCUMENTS SECTION ---------------- */}
-        {complaint.documents && complaint.documents.length > 0 && (
+        {/* ---------- DOCUMENTS (FIXED ONLY) ---------- */}
+        {complaint.documents?.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-3">
               Supporting Documents
             </h3>
 
             <div className="space-y-2">
-              {complaint.documents.map((doc, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center border px-4 py-2 rounded"
-                >
-                  <span className="text-sm text-gray-700">
-                    {doc.split("-").slice(1).join("-")}
-                  </span>
+              {complaint.documents.map((doc, index) => {
+                const name = getFileName(doc);
+                const path = getFilePath(doc);
+                const fullUrl = `http://localhost:5000/uploads/${path}`;
 
-                  <div className="flex gap-3">
-                    {isImageFile(doc) && (
-                      <button
-                        onClick={() =>
-                          setPreviewImage(
-                            `http://localhost:5000/uploads/${doc}`
-                          )
-                        }
+                return (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center border px-4 py-2 rounded"
+                  >
+                    <span className="text-sm text-gray-700">{name}</span>
+
+                    <div className="flex gap-3">
+                      {(isImage(name) || isPDF(name) || isText(name)) && (
+                        <button
+                          onClick={() => setPreviewFile({ name, url: fullUrl })}
+                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                        >
+                          View
+                        </button>
+                      )}
+
+                      {isDoc(name) && (
+                        <button
+                          onClick={() =>
+                            alert("Preview not supported for DOC/DOCX files")
+                          }
+                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                        >
+                          View
+                        </button>
+                      )}
+
+                      <a
+                        href={`http://localhost:5000/api/grievance/complaint-user/download/${path}`}
                         className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
                       >
-                        View Image
-                      </button>
-                    )}
-
-                    <a
-                      href={`http://localhost:5000/api/grievance/complaint-user/download/${doc}`}
-                      className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
-                    >
-                      Download
-                    </a>
+                        Download
+                      </a>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {/* ---------------- IMAGE PREVIEW MODAL ---------------- */}
-      {previewImage && (
+      {/* ---------- PREVIEW MODAL ---------- */}
+      {previewFile && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded max-w-3xl w-full">
+          <div className="bg-white p-4 rounded max-w-4xl w-full">
 
-            {/* Header row (NO OVERLAP) */}
             <div className="flex justify-end mb-3">
               <button
-                onClick={() => setPreviewImage(null)}
+                onClick={() => setPreviewFile(null)}
                 className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
               >
                 Cancel
               </button>
             </div>
 
-            {/* Image */}
-            <div className="flex justify-center">
+            {isImage(previewFile.name) && (
               <img
-                src={previewImage}
+                src={previewFile.url}
                 alt="Preview"
-                className="max-h-[75vh] object-contain"
+                className="max-h-[75vh] mx-auto object-contain"
               />
-            </div>
+            )}
 
+            {isPDF(previewFile.name) && (
+              <iframe
+                src={previewFile.url}
+                className="w-full h-[75vh]"
+                title="PDF Preview"
+              />
+            )}
+
+            {isText(previewFile.name) && (
+              <iframe
+                src={previewFile.url}
+                className="w-full h-[75vh]"
+                title="Text Preview"
+              />
+            )}
           </div>
         </div>
       )}

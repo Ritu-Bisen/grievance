@@ -31,13 +31,19 @@ export default function PhysicalAssessmentPage() {
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
-  /* ================= FILE HANDLER ================= */
+  /* ================= FILE HANDLER (🔥 FIXED) ================= */
   const handleFileChange = (e) => {
-    if (e.target.files.length > 5) {
-      alert("Maximum 5 documents allowed");
+    const newFiles = Array.from(e.target.files);
+    const combined = [...files, ...newFiles];
+
+    if (combined.length > 5) {
+      alert("You can upload a maximum of 5 documents only");
+      e.target.value = "";
       return;
     }
-    setFiles(Array.from(e.target.files));
+
+    setFiles(combined);
+    e.target.value = "";
   };
 
   /* ================= SUBMIT ================= */
@@ -100,61 +106,36 @@ export default function PhysicalAssessmentPage() {
           {/* ROW 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
             <div>
-              <label className="text-sm font-medium">
-                Tender No. (Auto-filled)
-              </label>
-              <input
-                disabled
-                value={autoFilledData.tender_no}
-                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border"
-              />
+              <label className="text-sm font-medium">Tender No. (Auto-filled)</label>
+              <input disabled value={autoFilledData.tender_no}
+                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border" />
             </div>
 
             <div>
-              <label className="text-sm font-medium">
-                PO No. (Auto-filled)
-              </label>
-              <input
-                disabled
-                value={autoFilledData.po_no}
-                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border"
-              />
+              <label className="text-sm font-medium">PO No. (Auto-filled)</label>
+              <input disabled value={autoFilledData.po_no}
+                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border" />
             </div>
           </div>
 
-          {/* ROW 2 (🔥 labels fixed – nothing missing) */}
+          {/* ROW 2 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
             <div>
-              <label className="text-sm font-medium">
-                Physical Stock at Warehouse (Auto-filled)
-              </label>
-              <input
-                disabled
-                value={autoFilledData.stock_warehouse}
-                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border"
-              />
+              <label className="text-sm font-medium">Physical Stock at Warehouse</label>
+              <input disabled value={autoFilledData.stock_warehouse}
+                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border" />
             </div>
 
             <div>
-              <label className="text-sm font-medium">
-                Physical Stock at Complaint Facility (Auto-filled)
-              </label>
-              <input
-                disabled
-                value={autoFilledData.stock_facility}
-                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border"
-              />
+              <label className="text-sm font-medium">Physical Stock at Complaint Facility</label>
+              <input disabled value={autoFilledData.stock_facility}
+                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border" />
             </div>
 
             <div>
-              <label className="text-sm font-medium">
-                Total Stock Intended at Facility (Auto-filled)
-              </label>
-              <input
-                disabled
-                value={autoFilledData.total_stock}
-                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border"
-              />
+              <label className="text-sm font-medium">Total Stock Intended at Facility</label>
+              <input disabled value={autoFilledData.total_stock}
+                className="w-full mt-1 px-3 py-2 bg-gray-100 rounded border" />
             </div>
           </div>
 
@@ -174,37 +155,52 @@ export default function PhysicalAssessmentPage() {
             </select>
           </div>
 
-          {/* UPLOAD DOCUMENTS */}
+          {/* 🔥 UPLOAD DOCUMENTS (SAME AS COMPLAINT FORM) */}
           <div>
             <label className="text-sm font-medium">
-              Upload Documents
+              Upload Documents (Max 5)
             </label>
 
-            <input
-              type="file"
-              multiple
-              hidden
-              id="assessmentDocs"
-              onChange={handleFileChange}
-            />
-
-            <div className="mt-2 border-2 border-dashed rounded p-6 text-center text-gray-500">
-              <p>Drag and drop files here, or click to browse</p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  document.getElementById("assessmentDocs").click()
-                }
-                className="mt-3 px-4 py-2 bg-gray-200 rounded"
-              >
-                Upload Documents
-              </button>
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <input
+                type="file"
+                multiple
+                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="
+                  file:bg-orange-500
+                  file:text-white
+                  file:px-3
+                  file:py-1
+                  file:rounded
+                  file:border-0
+                  hover:file:bg-orange-600
+                  cursor-pointer
+                "
+              />
 
               {files.length > 0 && (
-                <p className="text-sm mt-2 text-green-600">
-                  {files.length} file(s) selected
-                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {files.map((file, i) => {
+                    const isImage = file.type.startsWith("image/");
+                    return (
+                      <div key={i} className="w-12 border rounded p-0.5 bg-gray-50 text-center">
+                        {isImage ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-10 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="h-10 flex items-center justify-center text-lg">📄</div>
+                        )}
+                        <p className="text-[9px] truncate mt-1" title={file.name}>
+                          {file.name}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
