@@ -271,29 +271,36 @@ export const viewWarehouseAssessment = async (req, res) => {
 /* ============================================================= */
 /*                    RESOLVE COMPLAINT                          */
 /* ============================================================= */
-
 export const resolveComplaint = async (req, res) => {
   const { complaint_code, resolution_remark } = req.body;
 
   if (!complaint_code) {
-    return res.status(400).json({ message: "complaint_code required" });
+    return res.status(400).json({
+      message: "complaint_code required"
+    });
   }
 
   try {
     await pool.execute(
       `UPDATE complaints
        SET status = 'RESOLVED',
-           resolution_remark = ?
+           resolution_remark = ?,
+           resolved_at = NOW()
        WHERE complaint_code = ?`,
       [resolution_remark || null, complaint_code]
     );
 
-    res.json({ message: "Complaint resolved successfully" });
+    res.json({
+      message: "Complaint resolved successfully"
+    });
   } catch (err) {
     console.error("RESOLVE ERROR:", err);
-    res.status(500).json({ message: "Failed to resolve complaint" });
+    res.status(500).json({
+      message: "Failed to resolve complaint"
+    });
   }
 };
+
 
 /* ============================================================= */
 /*                    DISPATCH SAMPLE                            */

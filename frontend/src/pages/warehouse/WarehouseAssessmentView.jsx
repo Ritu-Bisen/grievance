@@ -54,6 +54,13 @@ export default function WarehouseAssessmentView() {
         complaint.resolution_remark
       ]);
     }
+    if (complaint.resolved_at) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Resolved On",
+        new Date(complaint.resolved_at).toLocaleString()
+      ]);
+    }
 
     if (complaint.dispatch_remark) {
       complaintRows.push([
@@ -201,6 +208,13 @@ export default function WarehouseAssessmentView() {
                   {complaint.resolution_remark}
                 </div>
               )}
+              {complaint.resolved_at && (
+                <div className="col-span-2">
+                <b>Resolved On:</b><br />
+                {new Date(complaint.resolved_at).toLocaleString()}
+                </div>
+             )}
+
 
               {complaint.dispatch_remark && (
                 <div className="col-span-2">
