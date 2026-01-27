@@ -23,7 +23,7 @@ export const warehouseDashboard = async (req, res) => {
   try {
     const complaints = await warehouseDashboardService(
       req.query,
-      req.user   // Auth se aata hai
+      req.user
     );
     res.json({ complaints });
   } catch (err) {
@@ -56,7 +56,6 @@ export const receiveSampleWarehouse = async (req, res) => {
     );
 
     res.json({ status: "SAMPLE_RECEIVED_WH" });
-
   } catch (err) {
     console.error("RECEIVE SAMPLE ERROR:", err);
     res.status(500).json({
@@ -87,7 +86,6 @@ export const approveWarehouse = async (req, res) => {
     );
 
     res.json({ status: "IN_PROGRESS_WH" });
-
   } catch (err) {
     console.error("APPROVE ERROR:", err);
     res.status(500).json({
@@ -118,7 +116,6 @@ export const rejectWarehouse = async (req, res) => {
     );
 
     res.json({ status: "REJECTED_WH" });
-
   } catch (err) {
     console.error("REJECT ERROR:", err);
     res.status(500).json({
@@ -143,6 +140,7 @@ export const submitWarehouseAssessment = async (req, res) => {
       stock_warehouse,
       stock_facility,
       total_stock,
+      same_complaint_present,   // ✅ FIX 1: ADDED
       remarks,
       adr_severity,
       quality_description
@@ -199,12 +197,13 @@ export const submitWarehouseAssessment = async (req, res) => {
         stock_warehouse,
         stock_facility,
         total_stock,
+        same_complaint_present,
         remarks,
         adr_severity,
         quality_description,
         documents
       )
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,   // ✅ FIX 2: 14 placeholders
       [
         complaint_code,
         assessment_type,
@@ -215,6 +214,7 @@ export const submitWarehouseAssessment = async (req, res) => {
         stock_warehouse || null,
         stock_facility || null,
         total_stock || null,
+        same_complaint_present || null,
         remarks || null,
         adr_severity || null,
         quality_description || null,
@@ -225,7 +225,6 @@ export const submitWarehouseAssessment = async (req, res) => {
     res.json({
       message: "Assessment submitted successfully"
     });
-
   } catch (err) {
     console.error("SUBMIT ASSESSMENT ERROR:", err);
     res.status(500).json({
@@ -261,11 +260,64 @@ export const viewWarehouseAssessment = async (req, res) => {
         ? { ...assessment, documents: safeJson(assessment.documents) }
         : null
     });
-
   } catch (err) {
     console.error("VIEW ASSESSMENT ERROR:", err);
     res.status(500).json({
       message: "Failed to load warehouse assessment"
     });
+  }
+};
+
+/* ============================================================= */
+/*                    RESOLVE COMPLAINT                          */
+/* ============================================================= */
+
+export const resolveComplaint = async (req, res) => {
+  const { complaint_code, resolution_remark } = req.body;
+
+  if (!complaint_code) {
+    return res.status(400).json({ message: "complaint_code required" });
+  }
+
+  try {
+    await pool.execute(
+      `UPDATE complaints
+       SET status = 'RESOLVED',
+           resolution_remark = ?
+       WHERE complaint_code = ?`,
+      [resolution_remark || null, complaint_code]
+    );
+
+    res.json({ message: "Complaint resolved successfully" });
+  } catch (err) {
+    console.error("RESOLVE ERROR:", err);
+    res.status(500).json({ message: "Failed to resolve complaint" });
+  }
+};
+
+/* ============================================================= */
+/*                    DISPATCH SAMPLE                            */
+/* ============================================================= */
+
+export const dispatchSample = async (req, res) => {
+  const { complaint_code, remarks } = req.body;
+
+  if (!complaint_code) {
+    return res.status(400).json({ message: "complaint_code required" });
+  }
+
+  try {
+    await pool.execute(
+      `UPDATE complaints
+       SET status = 'SAMPLE_DISPATCHED_WH',
+           dispatch_remark = ?
+       WHERE complaint_code = ?`,
+      [remarks || null, complaint_code]
+    );
+
+    res.json({ message: "Sample dispatched from warehouse" });
+  } catch (err) {
+    console.error("DISPATCH ERROR:", err);
+    res.status(500).json({ message: "Failed to dispatch sample" });
   }
 };

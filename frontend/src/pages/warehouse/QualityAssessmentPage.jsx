@@ -65,7 +65,8 @@ export default function QualityAssessmentPage() {
       formData.append("stock_facility", autoFilledData.stock_facility);
       formData.append("total_stock", autoFilledData.total_stock);
 
-      formData.append("remarks", sameComplaint);
+      formData.append("same_complaint_present", sameComplaint);
+
       formData.append("quality_description", qualityDescription);
 
       files.forEach(file => {
@@ -79,7 +80,7 @@ export default function QualityAssessmentPage() {
       );
 
       alert("Quality assessment submitted successfully");
-      navigate("/warehouse");
+      navigate(`/warehouse/assessment/submitted/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Submit failed");

@@ -14,7 +14,9 @@ import {
   approveWarehouse,
   rejectWarehouse,
   submitWarehouseAssessment,
-  viewWarehouseAssessment
+  viewWarehouseAssessment,
+  resolveComplaint,          // 🔥 ADDED
+  dispatchSample             // 🔥 ADDED
 } from "../controllers/warehouse.controllers.js";
 
 import { assessmentUpload } from "../middlewares/assessmentUpload.js";
@@ -85,7 +87,7 @@ router.get(
   warehouseDashboard
 );
 
-// ✅ Receive sample at warehouse (NO Auth – as per your flow)
+// ✅ Receive sample at warehouse
 router.post(
   "/warehouse/receive-sample",
   receiveSampleWarehouse
@@ -120,6 +122,22 @@ router.post(
 router.get(
   "/warehouse/assessment/view/:complaintCode",
   viewWarehouseAssessment
+);
+
+/* ============================================================= */
+/*              FINAL WAREHOUSE ACTION ROUTES 🔥                 */
+/* ============================================================= */
+
+// Resolve Physical Complaint
+router.post(
+  "/warehouse/resolve",
+  resolveComplaint
+);
+
+// Dispatch Sample (ADR / QUALITY)
+router.post(
+  "/warehouse/dispatch",
+  dispatchSample
 );
 
 export default router;

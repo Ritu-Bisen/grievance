@@ -28,22 +28,33 @@ export default function ADRAssessmentPage() {
   useEffect(() => {
     axios
       .get(`http://localhost:5000/api/grievance/complaint-user/view/${code}`)
-      .then(res => setComplaint(res.data))
+      .then((res) => setComplaint(res.data))
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
-  /* ================= FILE HANDLER ================= */
+  /* ================= FILE HANDLER (🔥 SAME AS PHYSICAL) ================= */
   const handleFileChange = (e) => {
-    if (e.target.files.length > 5) {
-      alert("Maximum 5 documents allowed");
+    const newFiles = Array.from(e.target.files);
+    const combined = [...files, ...newFiles];
+
+    if (combined.length > 5) {
+      alert("You can upload a maximum of 5 documents only");
+      e.target.value = "";
       return;
     }
-    setFiles(Array.from(e.target.files));
+
+    setFiles(combined);
+    e.target.value = "";
   };
 
   /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
     try {
+      if (!sameComplaint || !adrSeverity || !remarks) {
+        alert("Please fill all mandatory fields");
+        return;
+      }
+
       setSubmitting(true);
 
       const formData = new FormData();
@@ -59,10 +70,11 @@ export default function ADRAssessmentPage() {
       formData.append("stock_facility", autoFilledData.stock_facility);
       formData.append("total_stock", autoFilledData.total_stock);
 
-      formData.append("remarks", remarks);
+      formData.append("same_complaint_present", sameComplaint);
       formData.append("adr_severity", adrSeverity);
+      formData.append("remarks", remarks);
 
-      files.forEach(file => {
+      files.forEach((file) => {
         formData.append("documents", file);
       });
 
@@ -73,7 +85,11 @@ export default function ADRAssessmentPage() {
       );
 
       alert("ADR assessment submitted successfully");
-      navigate("/warehouse");
+
+      /* 🔥 FIRST TIME POPUP FLAG */
+    
+      /* 🔥 POPUP PAGE */
+      navigate(`/warehouse/assessment/submitted/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Submit failed");
@@ -90,7 +106,7 @@ export default function ADRAssessmentPage() {
 
       <div className="max-w-6xl mx-auto bg-white mt-6 p-6 rounded shadow">
 
-        {/* 🔝 COMPLAINT DETAILS + DOCUMENTS */}
+        {/* 🔝 COMPLAINT DETAILS */}
         <ComplaintTopSection complaint={complaint} />
 
         {/* ================= ADR ASSESSMENT FORM ================= */}
@@ -125,7 +141,7 @@ export default function ADRAssessmentPage() {
             </div>
           </div>
 
-          {/* ROW 2 (🔥 labels intact) */}
+          {/* ROW 2 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
             <div>
               <label className="text-sm font-medium">
@@ -208,37 +224,60 @@ export default function ADRAssessmentPage() {
             />
           </div>
 
-          {/* UPLOAD DOCUMENTS */}
+          {/* 🔥 UPLOAD DOCUMENTS (EXACT SAME AS PHYSICAL) */}
           <div>
             <label className="text-sm font-medium">
-              Upload Documents
+              Upload Documents (Max 5)
             </label>
 
-            <input
-              type="file"
-              multiple
-              hidden
-              id="adrDocs"
-              onChange={handleFileChange}
-            />
-
-            <div className="mt-2 border-2 border-dashed rounded p-6 text-center text-gray-500">
-              <p>Drag and drop files here, or click to browse</p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  document.getElementById("adrDocs").click()
-                }
-                className="mt-3 px-4 py-2 bg-gray-200 rounded"
-              >
-                Upload Documents
-              </button>
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <input
+                type="file"
+                multiple
+                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="
+                  file:bg-orange-500
+                  file:text-white
+                  file:px-3
+                  file:py-1
+                  file:rounded
+                  file:border-0
+                  hover:file:bg-orange-600
+                  cursor-pointer
+                "
+              />
 
               {files.length > 0 && (
-                <p className="text-sm mt-2 text-green-600">
-                  {files.length} file(s) selected
-                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {files.map((file, i) => {
+                    const isImage = file.type.startsWith("image/");
+                    return (
+                      <div
+                        key={i}
+                        className="w-12 border rounded p-0.5 bg-gray-50 text-center"
+                      >
+                        {isImage ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-10 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="h-10 flex items-center justify-center text-lg">
+                            📄
+                          </div>
+                        )}
+                        <p
+                          className="text-[9px] truncate mt-1"
+                          title={file.name}
+                        >
+                          {file.name}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

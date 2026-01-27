@@ -47,22 +47,46 @@ export default function WarehouseAssessmentView() {
       ["COMPLAINT", "Status", complaint.status],
     ];
 
+    if (complaint.resolution_remark) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Resolution Remark",
+        complaint.resolution_remark
+      ]);
+    }
+
+    if (complaint.dispatch_remark) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Dispatch Remark",
+        complaint.dispatch_remark
+      ]);
+    }
+
     let assessmentRows = [];
 
+    /* 🔥 SAME COMPLAINT (ALL TYPES) */
+    if (assessment.same_complaint_present) {
+      assessmentRows.push([
+        "ASSESSMENT",
+        "Same Complaint Present at Warehouse",
+        assessment.same_complaint_present
+      ]);
+    }
+
     if (assessment.assessment_type === "PHYSICAL") {
-      assessmentRows = [
+      assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "PHYSICAL"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
         ["ASSESSMENT", "PO No", assessment.po_no],
         ["ASSESSMENT", "Stock (Warehouse)", assessment.stock_warehouse],
         ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
-        ["ASSESSMENT", "Total Stock", assessment.total_stock],
-        ["ASSESSMENT", "Remarks", assessment.remarks],
-      ];
+        ["ASSESSMENT", "Total Stock", assessment.total_stock]
+      );
     }
 
     if (assessment.assessment_type === "ADR") {
-      assessmentRows = [
+      assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "ADR"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
         ["ASSESSMENT", "PO No", assessment.po_no],
@@ -70,21 +94,20 @@ export default function WarehouseAssessmentView() {
         ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
         ["ASSESSMENT", "Total Stock", assessment.total_stock],
         ["ASSESSMENT", "ADR Severity", assessment.adr_severity],
-        ["ASSESSMENT", "Remarks", assessment.remarks],
-      ];
+        ["ASSESSMENT", "Remarks", assessment.remarks]
+      );
     }
 
     if (assessment.assessment_type === "QUALITY") {
-      assessmentRows = [
+      assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "QUALITY"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
         ["ASSESSMENT", "PO No", assessment.po_no],
         ["ASSESSMENT", "Stock (Warehouse)", assessment.stock_warehouse],
         ["ASSESSMENT", "Stock (Facility)", assessment.stock_facility],
         ["ASSESSMENT", "Total Stock", assessment.total_stock],
-        ["ASSESSMENT", "Quality Description", assessment.quality_description],
-        ["ASSESSMENT", "Remarks", assessment.remarks],
-      ];
+        ["ASSESSMENT", "Quality Description", assessment.quality_description]
+      );
     }
 
     const rows = [
@@ -117,14 +140,11 @@ export default function WarehouseAssessmentView() {
 
       <div className="max-w-6xl mx-auto bg-white mt-6 p-6 rounded shadow">
 
-        {/* 🔝 COMPLAINT TOP (UNCHANGED) */}
         <ComplaintTopSection complaint={complaint} />
 
-        {/* ================= ASSESSMENT DETAILS ================= */}
         {assessment ? (
           <div className="border rounded p-6">
 
-            {/* HEADER */}
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
                 Warehouse Assessment Details
@@ -138,7 +158,6 @@ export default function WarehouseAssessmentView() {
               </button>
             </div>
 
-            {/* DETAILS */}
             <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div><b>Assessment Type:</b> {assessment.assessment_type}</div>
               <div><b>Item Code:</b> {assessment.item_code}</div>
@@ -148,6 +167,14 @@ export default function WarehouseAssessmentView() {
               <div><b>Stock (Warehouse):</b> {assessment.stock_warehouse}</div>
               <div><b>Stock (Facility):</b> {assessment.stock_facility}</div>
               <div><b>Total Stock:</b> {assessment.total_stock}</div>
+
+              {/* 🔥 SAME COMPLAINT (VIEW) */}
+              {assessment.same_complaint_present && (
+                <div>
+                  <b>Same Complaint Present at Warehouse:</b>{" "}
+                  {assessment.same_complaint_present}
+                </div>
+              )}
 
               {assessment.adr_severity && (
                 <div><b>ADR Severity:</b> {assessment.adr_severity}</div>
@@ -160,15 +187,29 @@ export default function WarehouseAssessmentView() {
                 </div>
               )}
 
-              {assessment.remarks && (
+              {/* ✅ ONLY ADR REMARKS */}
+              {assessment.assessment_type === "ADR" && assessment.remarks && (
                 <div className="col-span-2">
-                  <b>Remarks:</b><br />
+                  <b>Assessment Remarks:</b><br />
                   {assessment.remarks}
+                </div>
+              )}
+
+              {complaint.resolution_remark && (
+                <div className="col-span-2">
+                  <b>Resolution Remark:</b><br />
+                  {complaint.resolution_remark}
+                </div>
+              )}
+
+              {complaint.dispatch_remark && (
+                <div className="col-span-2">
+                  <b>Dispatch Remark:</b><br />
+                  {complaint.dispatch_remark}
                 </div>
               )}
             </div>
 
-            {/* ================= DOCUMENTS ================= */}
             <div>
               <h4 className="font-semibold mb-3">Assessment Documents</h4>
 
@@ -219,7 +260,6 @@ export default function WarehouseAssessmentView() {
         )}
       </div>
 
-      {/* ================= PREVIEW MODAL ================= */}
       {previewFile && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded max-w-4xl w-full">

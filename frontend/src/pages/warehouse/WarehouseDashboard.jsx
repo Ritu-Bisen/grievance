@@ -340,10 +340,43 @@ export default function WarehouseDashboard() {
       }
 
       // 3️⃣ In progress → DIRECT assessment form (type decider)
-      if (c.status === "IN_PROGRESS_WH") {
-        navigate(`/warehouse/action/${c.complaint_code}`);
+      // 3️⃣ In progress (decision point)
+// 3️⃣ In progress (decision point)
+if (c.status === "IN_PROGRESS_WH") {
+  // 🔥 step-1: assessment data fetch (same API as WarehouseAssessmentView)
+  axios
+    .get(
+      `http://localhost:5000/api/grievance/warehouse/assessment/view/${c.complaint_code}`
+    )
+    .then((res) => {
+      const assessment = res.data.assessment;
+
+      // ❌ assessment hi nahi hai → form
+      if (!assessment || !assessment.po_no || !assessment.tender_no) {
+        if (c.complaint_type === "PHYSICAL") {
+          navigate(`/warehouse/action/physical/${c.complaint_code}`);
+        } else if (c.complaint_type === "ADR") {
+          navigate(`/warehouse/action/adr/${c.complaint_code}`);
+        } else {
+          navigate(`/warehouse/action/quality/${c.complaint_code}`);
+        }
         return;
       }
+
+      // ✅ assessment completed → next stage
+      if (c.complaint_type === "PHYSICAL") {
+        navigate(`/warehouse/action/resolve/${c.complaint_code}`);
+      } else {
+        navigate(`/warehouse/action/dispatch/${c.complaint_code}`);
+      }
+    })
+    .catch(() => {
+      alert("Unable to check warehouse assessment");
+    });
+
+  return;
+}
+
     }}
     className={`px-3 py-1 rounded text-xs text-white w-full ${
       DISABLE_WAREHOUSE_ACTION.includes(c.status)

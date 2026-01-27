@@ -63,7 +63,8 @@ export default function PhysicalAssessmentPage() {
       formData.append("stock_warehouse", autoFilledData.stock_warehouse);
       formData.append("stock_facility", autoFilledData.stock_facility);
       formData.append("total_stock", autoFilledData.total_stock);
-      formData.append("remarks", sameComplaint);
+      formData.append("same_complaint_present", sameComplaint);
+
 
       files.forEach(file => {
         formData.append("documents", file);
@@ -76,7 +77,7 @@ export default function PhysicalAssessmentPage() {
       );
 
       alert("Physical assessment submitted successfully");
-      navigate("/warehouse");
+      navigate(`/warehouse/assessment/submitted/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Submit failed");
