@@ -65,7 +65,6 @@ export default function PhysicalAssessmentPage() {
       formData.append("total_stock", autoFilledData.total_stock);
       formData.append("same_complaint_present", sameComplaint);
 
-
       files.forEach(file => {
         formData.append("documents", file);
       });
