@@ -143,12 +143,22 @@ export default function WarehouseApproveReject() {
                 Back to Dashboard
               </button>
 
-              <button
-                onClick={() => navigate(`/warehouse/action/${code}`)}
-                className="px-6 py-2 bg-green-600 text-white rounded"
-              >
-                Next Stage
-              </button>
+             <button
+  onClick={() => {
+    if (complaint.complaint_type === "PHYSICAL") {
+      navigate(`/warehouse/action/physical/${code}`);
+    } else if (complaint.complaint_type === "ADR") {
+      navigate(`/warehouse/action/adr/${code}`);
+    } else {
+      navigate(`/warehouse/action/quality/${code}`);
+    }
+  }}
+  className="px-6 py-2 bg-green-600 text-white rounded"
+>
+  Next Stage
+</button>
+
+
             </div>
           </div>
         )}

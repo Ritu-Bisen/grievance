@@ -312,44 +312,82 @@ export default function WarehouseDashboard() {
 
                       <button
                         onClick={() =>
-                          navigate(`/warehouse/view/${c.complaint_code}`)
+                           navigate(`/warehouse/assessment/view/${c.complaint_code}`)
                         }
                         className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
                       >
-                        View (Warehouse)
+                         View (Warehouse)
                       </button>
+
                     </td>
 
                     <td className="p-3">
-                      <button
-                        disabled={disableAction}
-                        onClick={() => {
-                          console.log("STATUS:", c.status);
+  <button
+    disabled={DISABLE_WAREHOUSE_ACTION.includes(c.status)}
+    onClick={() => {
+      console.log("STATUS:", c.status);
 
-                          if (SAMPLE_RECEIVED_ALLOWED.includes(c.status)) {
-                            navigate(
-                              `/warehouse/sample-received/${c.complaint_code}`
-                            );
+      // 1️⃣ Facility se sample aaya → receive page
+      if (SAMPLE_RECEIVED_ALLOWED.includes(c.status)) {
+        navigate(`/warehouse/sample-received/${c.complaint_code}`);
+        return;
+      }
 
-                          }
-                          else if (c.status === "SAMPLE_RECEIVED_WH") {
-                                 navigate(`/warehouse/approve-reject/${c.complaint_code}`);0
-                          }  
-                          else {
-                            navigate(
-                              `/warehouse/action/${c.complaint_code}`
-                            );
-                          }
-                        }}
-                        className={`px-3 py-1 rounded text-xs text-white w-full ${
-                          disableAction
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-orange-500"
-                        }`}
-                      >
-                        Warehouse Action
-                      </button>
-                    </td>
+      // 2️⃣ Sample received → approve / reject
+      if (c.status === "SAMPLE_RECEIVED_WH") {
+        navigate(`/warehouse/approve-reject/${c.complaint_code}`);
+        return;
+      }
+
+      // 3️⃣ In progress → DIRECT assessment form (type decider)
+      // 3️⃣ In progress (decision point)
+// 3️⃣ In progress (decision point)
+if (c.status === "IN_PROGRESS_WH") {
+  // 🔥 step-1: assessment data fetch (same API as WarehouseAssessmentView)
+  axios
+    .get(
+      `http://localhost:5000/api/grievance/warehouse/assessment/view/${c.complaint_code}`
+    )
+    .then((res) => {
+      const assessment = res.data.assessment;
+
+      // ❌ assessment hi nahi hai → form
+      if (!assessment || !assessment.po_no || !assessment.tender_no) {
+        if (c.complaint_type === "PHYSICAL") {
+          navigate(`/warehouse/action/physical/${c.complaint_code}`);
+        } else if (c.complaint_type === "ADR") {
+          navigate(`/warehouse/action/adr/${c.complaint_code}`);
+        } else {
+          navigate(`/warehouse/action/quality/${c.complaint_code}`);
+        }
+        return;
+      }
+
+      // ✅ assessment completed → next stage
+      if (c.complaint_type === "PHYSICAL") {
+        navigate(`/warehouse/action/resolve/${c.complaint_code}`);
+      } else {
+        navigate(`/warehouse/action/dispatch/${c.complaint_code}`);
+      }
+    })
+    .catch(() => {
+      alert("Unable to check warehouse assessment");
+    });
+
+  return;
+}
+
+    }}
+    className={`px-3 py-1 rounded text-xs text-white w-full ${
+      DISABLE_WAREHOUSE_ACTION.includes(c.status)
+        ? "bg-gray-400 cursor-not-allowed"
+        : "bg-orange-500"
+    }`}
+  >
+    Warehouse Action
+  </button>
+</td>
+
                   </tr>
                 );
               })}
