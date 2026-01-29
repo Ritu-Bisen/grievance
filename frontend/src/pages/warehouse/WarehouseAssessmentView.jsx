@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 import ComplaintTopSection from "../../components/ComplaintTopSection";
 
@@ -15,15 +15,13 @@ export default function WarehouseAssessmentView() {
   const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
-    axios
-      .get(
-        `http://localhost:5000/api/grievance/warehouse/assessment/view/${code}`
-      )
-      .then(res => {
-        setComplaint(res.data.complaint);
-        setAssessment(res.data.assessment);
-      })
-      .catch(() => alert("Failed to load warehouse assessment"));
+    api
+  .get(`/grievance/warehouse/assessment/view/${code}`)
+  .then(res => {
+    setComplaint(res.data.complaint);
+    setAssessment(res.data.assessment);
+  })
+  .catch(() => alert("Failed to load warehouse assessment"));
   }, [code]);
 
   if (!complaint) return null;
@@ -31,10 +29,13 @@ export default function WarehouseAssessmentView() {
   /* ---------- FILE TYPE CHECK ---------- */
   const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
   const isPDF = (name) => /\.pdf$/i.test(name);
+  
 
   /* ================= CSV DOWNLOAD ================= */
   const downloadCSV = () => {
-    if (!assessment) return;
+
+    // ✅ allow CSV for rejected also
+    if (!assessment && complaint.status !== "REJECTED_WH") return;
 
     const complaintRows = [
       ["COMPLAINT", "Complaint Code", complaint.complaint_code],
@@ -46,14 +47,17 @@ export default function WarehouseAssessmentView() {
       ["COMPLAINT", "Batch No", complaint.batch_no],
       ["COMPLAINT", "Status", complaint.status],
     ];
+   
 
-    if (complaint.resolution_remark) {
+    /* ✅ Created & Resolved dates (CSV FIX) */
+    if (complaint.created_at) {
       complaintRows.push([
         "COMPLAINT",
-        "Resolution Remark",
-        complaint.resolution_remark
+        "Created On",
+        new Date(complaint.created_at).toLocaleString()
       ]);
     }
+
     if (complaint.resolved_at) {
       complaintRows.push([
         "COMPLAINT",
@@ -62,18 +66,63 @@ export default function WarehouseAssessmentView() {
       ]);
     }
 
-    if (complaint.dispatch_remark) {
+    /* ComplaintTopSection extra details */
+    if (complaint.facility_address) {
       complaintRows.push([
         "COMPLAINT",
-        "Dispatch Remark",
-        complaint.dispatch_remark
+        "Facility Address",
+        complaint.facility_address
       ]);
+    }
+
+    if (complaint.quantity_received) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Quantity Received",
+        complaint.quantity_received
+      ]);
+    }
+
+    if (complaint.affected_quantity) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Affected Quantity",
+        complaint.affected_quantity
+      ]);
+    }
+
+    if (complaint.description) {
+      complaintRows.push([
+        "COMPLAINT",
+        "Description",
+        complaint.description
+      ]);
+    }
+
+    /* Rejected specific */
+    if (complaint.status === "REJECTED_WH") {
+      complaintRows.push(["COMPLAINT", "Rejected At", "Warehouse"]);
+
+      if (complaint.rejected_at) {
+        complaintRows.push([
+          "COMPLAINT",
+          "Rejected On",
+          new Date(complaint.rejected_at).toLocaleString()
+        ]);
+      }
+
+      if (complaint.resolution_remark) {
+        complaintRows.push([
+          "COMPLAINT",
+          "Rejection Remark",
+          complaint.resolution_remark
+        ]);
+      }
     }
 
     let assessmentRows = [];
 
-    /* 🔥 SAME COMPLAINT (ALL TYPES) */
-    if (assessment.same_complaint_present) {
+    if (assessment?.same_complaint_present) {
       assessmentRows.push([
         "ASSESSMENT",
         "Same Complaint Present at Warehouse",
@@ -81,7 +130,7 @@ export default function WarehouseAssessmentView() {
       ]);
     }
 
-    if (assessment.assessment_type === "PHYSICAL") {
+    if (assessment?.assessment_type === "PHYSICAL") {
       assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "PHYSICAL"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
@@ -92,7 +141,7 @@ export default function WarehouseAssessmentView() {
       );
     }
 
-    if (assessment.assessment_type === "ADR") {
+    if (assessment?.assessment_type === "ADR") {
       assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "ADR"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
@@ -105,7 +154,7 @@ export default function WarehouseAssessmentView() {
       );
     }
 
-    if (assessment.assessment_type === "QUALITY") {
+    if (assessment?.assessment_type === "QUALITY") {
       assessmentRows.push(
         ["ASSESSMENT", "Assessment Type", "QUALITY"],
         ["ASSESSMENT", "Tender No", assessment.tender_no],
@@ -149,6 +198,18 @@ export default function WarehouseAssessmentView() {
 
         <ComplaintTopSection complaint={complaint} />
 
+        {/* ✅ CSV button for REJECTED case */}
+        {complaint.status === "REJECTED_WH" && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={downloadCSV}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Download CSV
+            </button>
+          </div>
+        )}
+
         {assessment ? (
           <div className="border rounded p-6">
 
@@ -175,9 +236,8 @@ export default function WarehouseAssessmentView() {
               <div><b>Stock (Facility):</b> {assessment.stock_facility}</div>
               <div><b>Total Stock:</b> {assessment.total_stock}</div>
 
-              {/* 🔥 SAME COMPLAINT (VIEW) */}
               {assessment.same_complaint_present && (
-                <div>
+                <div className="col-span-2">
                   <b>Same Complaint Present at Warehouse:</b>{" "}
                   {assessment.same_complaint_present}
                 </div>
@@ -194,7 +254,6 @@ export default function WarehouseAssessmentView() {
                 </div>
               )}
 
-              {/* ✅ ONLY ADR REMARKS */}
               {assessment.assessment_type === "ADR" && assessment.remarks && (
                 <div className="col-span-2">
                   <b>Assessment Remarks:</b><br />
@@ -208,13 +267,13 @@ export default function WarehouseAssessmentView() {
                   {complaint.resolution_remark}
                 </div>
               )}
+
               {complaint.resolved_at && (
                 <div className="col-span-2">
-                <b>Resolved On:</b><br />
-                {new Date(complaint.resolved_at).toLocaleString()}
+                  <b>Resolved On:</b><br />
+                  {new Date(complaint.resolved_at).toLocaleString()}
                 </div>
-             )}
-
+              )}
 
               {complaint.dispatch_remark && (
                 <div className="col-span-2">
@@ -252,12 +311,14 @@ export default function WarehouseAssessmentView() {
                         </button>
 
                         <a
-                          href={`http://localhost:5000/uploads/assessment/${doc.file_name}`}
-                          download
-                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
-                        >
-                          Download
-                        </a>
+  href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${doc.file_name}`}
+  className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+>
+  Download
+</a>
+
+
+
                       </div>
                     </div>
                   ))}
@@ -269,11 +330,38 @@ export default function WarehouseAssessmentView() {
               )}
             </div>
           </div>
+
+        ) : complaint.status === "REJECTED_WH" ? (
+          <div className="border rounded p-6 bg-red-50">
+            <h3 className="text-lg font-semibold text-red-700 mb-2">
+              ❌ Complaint Rejected at Warehouse
+            </h3>
+
+            <p className="text-sm mb-2">
+              This complaint was reviewed by the warehouse team and was found to
+              be invalid. Hence, warehouse assessment was not required.
+            </p>
+
+            {complaint.rejected_at && (
+              <p className="text-sm">
+                <b>Rejected On:</b>{" "}
+                {new Date(complaint.rejected_at).toLocaleString()}
+              </p>
+            )}
+
+            {complaint.resolution_remark && (
+              <p className="text-sm mt-2">
+                <b>Remark:</b> {complaint.resolution_remark}
+              </p>
+            )}
+          </div>
+
         ) : (
           <p className="text-gray-500">Assessment not submitted yet</p>
         )}
       </div>
 
+      {/* ================= PREVIEW MODAL ================= */}
       {previewFile && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded max-w-4xl w-full">

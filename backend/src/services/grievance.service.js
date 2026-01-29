@@ -1,35 +1,42 @@
 import pool from "../config/db.js";
 import { randomUUID } from "crypto";
 
+/* ============================================================= */
+/*                    CREATE COMPLAINT                           */
+/* ============================================================= */
+
 export const createComplaintService = async (body, documents) => {
   const code = "CMP-" + randomUUID().slice(0, 8).toUpperCase();
 
   const sql = `
     INSERT INTO complaints (
       complaint_code, complaint_type, category,
-      facility_id, facility_name, facility_address,
+      facility_name, facility_address,
       item_code, item_name,
-      batch_no, warehouse_batch,
+      batch_no, warehouse_code,
       mfg_date, exp_date, purchase_date, quantity_received,
       affected_quantity, description, documents
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `;
 
   await pool.execute(sql, [
     code,
     body.complaint_type,
     body.category,
-    body.facility.id,
+
     body.facility.name,
     body.facility.address,
+
     body.item.code,
     body.item.name,
+
     body.batch.batchNo,
-    body.batch.warehouseBatch,
+    body.batch.warehouse_code,
     body.batch.mfg,
     body.batch.exp,
     body.batch.purchase,
     body.batch.quantity,
+
     body.affected_quantity,
     body.description,
     JSON.stringify(documents)
@@ -38,9 +45,13 @@ export const createComplaintService = async (body, documents) => {
   return code;
 };
 
+/* ============================================================= */
+/*                 FACILITY DASHBOARD FILTER                     */
+/* ============================================================= */
+
 export const dashboardService = async (filters) => {
-  let sql = "SELECT * FROM complaints WHERE 1=1";
-  const params = [];
+  let sql = "SELECT * FROM complaints WHERE facility_name = ?";
+  const params = [filters.facility_name]; // 🔥 MAIN FIX
 
   if (filters.complaintCode) {
     sql += " AND complaint_code LIKE ?";
@@ -67,25 +78,27 @@ export const dashboardService = async (filters) => {
   const [rows] = await pool.execute(sql, params);
   return rows;
 };
-export const dispatchFromFacilityService = async (complaintCode) => {
-  // get current status
+
+/* ============================================================= */
+/*              DISPATCH SAMPLE FROM FACILITY                    */
+/* ============================================================= */
+
+export const dispatchFromFacilityService = async (complaintCode, facilityName) => {
   const [rows] = await pool.execute(
-    "SELECT status FROM complaints WHERE complaint_code = ?",
+    "SELECT status, facility_name FROM complaints WHERE complaint_code = ?",
     [complaintCode]
   );
 
-  if (rows.length === 0) {
-    throw new Error("Complaint not found");
-  }
+  if (rows.length === 0) throw new Error("Complaint not found");
 
-  if (rows[0].status !== "SUBMITTED") {
+  if (rows[0].facility_name !== facilityName)
+    throw new Error("Unauthorized");
+
+  if (rows[0].status !== "SUBMITTED")
     throw new Error("Dispatch not allowed");
-  }
 
-  // update status
   await pool.execute(
     "UPDATE complaints SET status = ? WHERE complaint_code = ?",
     ["SAMPLE_DISPATCHED_FACILITY", complaintCode]
   );
 };
-

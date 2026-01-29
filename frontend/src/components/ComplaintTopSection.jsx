@@ -72,6 +72,14 @@ export default function ComplaintTopSection({ complaint }) {
           <div><b>Item Code:</b> {complaint.item_code}</div>
           <div><b>Batch No:</b> {complaint.batch_no}</div>
           <div><b>Status:</b> {complaint.status}</div>
+
+          {/* ✅ ADDED: CREATED DATE */}
+          {complaint.created_at && (
+            <div>
+              <b>Complaint Created On:</b>{" "}
+              {new Date(complaint.created_at).toLocaleString()}
+            </div>
+          )}
         </div>
 
         {/* ===== DOCUMENTS (SAME LOGIC AS COMPLAINT VIEW) ===== */}

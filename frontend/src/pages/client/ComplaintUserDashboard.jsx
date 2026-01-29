@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api.js";
+
 import GovHeader from "../../components/GovHeader";
 import { FaPlusCircle, FaHospital } from "react-icons/fa";
 
@@ -22,21 +23,23 @@ export default function ComplaintUserDashboard() {
   /* ---------------- LOAD DASHBOARD ---------------- */
 
   const loadDashboard = () => {
-    axios
-      .get("http://localhost:5000/api/grievance/complaint-user/dashboard", {
-        params: {
-          complaintCode,
-          status,
-          fromDate,
-          toDate,
-        },
-      })
-      .then((res) => {
-        setComplaints(res.data.complaints || []);
-      })
-      .catch(() => {
-        alert("Failed to load dashboard");
-      });
+    const token = localStorage.getItem("token");
+
+    api.get("/grievance/complaint-user/dashboard", {
+  params: {
+    complaintCode,
+    status,
+    fromDate,
+    toDate,
+  },
+})
+.then((res) => {
+  setComplaints(res.data.complaints || []);
+})
+.catch(() => {
+  alert("Failed to load dashboard");
+});
+
   };
 
   useEffect(() => {
@@ -46,6 +49,8 @@ export default function ComplaintUserDashboard() {
   /* ---------------- CLEAR FILTERS ---------------- */
 
   const clearFilters = () => {
+    const token = localStorage.getItem("token");
+
     setComplaintCode("");
     setStatus("");
     setFromDate("");
@@ -53,11 +58,14 @@ export default function ComplaintUserDashboard() {
     setShowDropdown(false);
     setFilteredIds([]);
 
-    axios
-      .get("http://localhost:5000/api/grievance/complaint-user/dashboard")
-      .then((res) => {
-        setComplaints(res.data.complaints || []);
-      });
+    api.get("/grievance/complaint-user/dashboard")
+  .then((res) => {
+    setComplaints(res.data.complaints || []);
+  })
+  .catch(() => {
+    alert("Failed to load dashboard");
+  });
+
   };
 
   /* ---------------- COMPLAINT ID SEARCH ---------------- */
@@ -86,23 +94,8 @@ export default function ComplaintUserDashboard() {
 
       <div className="max-w-7xl mx-auto p-6">
 
-        {/* ✅ WELCOME + RAISE SECTION */}
-        
-         <div className="
-  bg-green-50
-  border
-  border-green-200
-  rounded
-  px-6
-  py-4
-  mb-6
-  flex
-  items-center
-  justify-between
-
-
-        ">
-          {/* LEFT SIDE */}
+        {/* WELCOME + RAISE */}
+        <div className="bg-green-50 border border-green-200 rounded px-6 py-4 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FaHospital className="text-green-800 text-2xl" />
             <h2 className="text-lg font-semibold text-gray-800">
@@ -110,20 +103,9 @@ export default function ComplaintUserDashboard() {
             </h2>
           </div>
 
-          {/* RIGHT SIDE */}
           <button
             onClick={() => navigate("/complaint/select-type")}
-            className="
-              bg-blue-800
-              text-white
-              px-8
-              py-3
-              rounded
-              flex
-              items-center
-              gap-2
-              hover:bg-orange-600
-            "
+            className="bg-blue-800 text-white px-8 py-3 rounded flex items-center gap-2 hover:bg-orange-600"
           >
             <FaPlusCircle />
             Raise New Complaint
@@ -134,7 +116,6 @@ export default function ComplaintUserDashboard() {
         <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-            {/* Complaint ID */}
             <div className="relative">
               <label className="text-sm font-medium">Complaint ID</label>
               <input
@@ -166,7 +147,6 @@ export default function ComplaintUserDashboard() {
               )}
             </div>
 
-            {/* STATUS */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
@@ -209,23 +189,16 @@ export default function ComplaintUserDashboard() {
           </div>
 
           <div className="flex justify-end gap-3 mt-4">
-            <button
-              onClick={clearFilters}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
-            >
+            <button onClick={clearFilters} className="bg-orange-500 text-white px-6 py-2 rounded">
               Clear Filters
             </button>
-
-            <button
-              onClick={loadDashboard}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
-            >
+            <button onClick={loadDashboard} className="bg-orange-500 text-white px-6 py-2 rounded">
               Apply
             </button>
           </div>
         </div>
 
-        {/* TABLE (UNCHANGED) */}
+        {/* TABLE */}
         <div className="bg-white border rounded overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-orange-500 text-white">
@@ -263,16 +236,12 @@ export default function ComplaintUserDashboard() {
                   <td className="p-3">{c.batch_no}</td>
                   <td className="p-3">{c.affected_quantity}</td>
                   <td className="p-3">{c.status}</td>
-                  <td className="p-3">
-                    {new Date(c.created_at).toLocaleDateString()}
-                  </td>
+                  <td className="p-3">{new Date(c.created_at).toLocaleDateString()}</td>
 
                   <td className="p-3">
                     <button
-                      onClick={() =>
-                        navigate(`/complaint/view/${c.complaint_code}`)
-                      }
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                      onClick={() => navigate(`/complaint/view/${c.complaint_code}`)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs"
                     >
                       View
                     </button>
@@ -281,9 +250,7 @@ export default function ComplaintUserDashboard() {
                   <td className="p-3">
                     {c.status === "SUBMITTED" && (
                       <button
-                        onClick={() =>
-                          navigate(`/complaint/dispatch/${c.complaint_code}`)
-                        }
+                        onClick={() => navigate(`/complaint/dispatch/${c.complaint_code}`)}
                         className="bg-orange-500 text-white px-3 py-1 rounded text-xs"
                       >
                         Dispatch Sample
@@ -291,14 +258,15 @@ export default function ComplaintUserDashboard() {
                     )}
 
                     {[
-  "SAMPLE_DISPATCHED_FACILITY",
-  "SAMPLE_RECEIVED_WH",
-  "IN_PROGRESS_WH",
-  "SAMPLE_DISPATCHED_WH",
-  "SAMPLE_RECEIVED_QC",
-  "IN_PROGRESS_QC",
-  "RESOLVED","REJECTED_WH"
-].includes(c.status)&& (
+                      "SAMPLE_DISPATCHED_FACILITY",
+                      "SAMPLE_RECEIVED_WH",
+                      "IN_PROGRESS_WH",
+                      "SAMPLE_DISPATCHED_WH",
+                      "SAMPLE_RECEIVED_QC",
+                      "IN_PROGRESS_QC",
+                      "RESOLVED",
+                      "REJECTED_WH",
+                    ].includes(c.status) && (
                       <span className="text-green-700 text-xs font-medium">
                         Sample Dispatched
                       </span>

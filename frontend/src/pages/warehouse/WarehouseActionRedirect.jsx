@@ -1,14 +1,15 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-
+import api from "../../services/api";
 export default function WarehouseActionRedirect() {
   const { code } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:5000/api/grievance/complaint-user/view/${code}`)
+    api.get(
+  `/grievance/complaint-user/view/${code}`
+)
+
       .then(res => {
         const c = res.data;
 

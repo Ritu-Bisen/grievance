@@ -110,12 +110,15 @@ export const rejectWarehouse = async (req, res) => {
 
     await pool.execute(
       `UPDATE complaints
-       SET status = 'REJECTED_WH'
+       SET status = 'REJECTED_WH',
+           rejected_at = NOW(),
+           resolution_remark = 'Complaint rejected at warehouse as it was found invalid during initial verification.'
        WHERE complaint_code = ?`,
       [complaint_code]
     );
 
     res.json({ status: "REJECTED_WH" });
+
   } catch (err) {
     console.error("REJECT ERROR:", err);
     res.status(500).json({
@@ -123,6 +126,7 @@ export const rejectWarehouse = async (req, res) => {
     });
   }
 };
+
 
 /* ============================================================= */
 /*                SUBMIT WAREHOUSE ASSESSMENT                    */

@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import axios from "axios";
+import api from "../../services/api.js";
+
+;
 import GovHeader from "../../components/GovHeader";
 
 export default function DispatchSample() {
@@ -13,10 +15,10 @@ export default function DispatchSample() {
     try {
       setLoading(true);
 
-      await axios.post(
-        "http://localhost:5000/api/grievance/complaint-user/dispatch-facility",
-        { complaint_code: complaintCode }
-      );
+      await api.post(
+  "/grievance/complaint-user/dispatch-facility",
+  { complaint_code: complaintCode }
+);
 
       setDispatched(true);
     } catch (err) {

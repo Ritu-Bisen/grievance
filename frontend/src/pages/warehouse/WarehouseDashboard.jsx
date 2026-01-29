@@ -1,16 +1,29 @@
+/* ============================================================= */
+/*                  WAREHOUSE DASHBOARD                          */
+/* ============================================================= */
+
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";                   // ✅ REQUIRED (assessment check)
+import api from "../../services/api.js";          // ✅ TOKEN INTERCEPTOR
 import GovHeader from "../../components/GovHeader";
+
 import {
   FaWarehouse,
-  FaBoxOpen, FaHeartbeat, FaExclamationTriangle
+  FaBoxOpen,
+  FaHeartbeat,
+  FaExclamationTriangle
 } from "react-icons/fa";
+
+/* ============================================================= */
+/*                       COMPONENT                               */
+/* ============================================================= */
 
 export default function WarehouseDashboard() {
   const navigate = useNavigate();
 
-  /* ---------------- STATE ---------------- */
+  /* ============================================================= */
+  /*                          STATE                                */
+  /* ============================================================= */
 
   const [complaints, setComplaints] = useState([]);
 
@@ -22,12 +35,14 @@ export default function WarehouseDashboard() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
 
-  /* ---------------- LOAD DASHBOARD ---------------- */
+  /* ============================================================= */
+  /*                   LOAD DASHBOARD                              */
+  /* ============================================================= */
 
   const loadDashboard = async (complaintType = "") => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/grievance/warehouse/dashboard",
+      const res = await api.get(
+        "/grievance/warehouse/dashboard",
         {
           params: {
             complaintCode,
@@ -35,28 +50,29 @@ export default function WarehouseDashboard() {
             fromDate,
             toDate,
             complaintType,
-            _t: Date.now()
-          },
-          headers: {
-            "Cache-Control": "no-cache"
+            _t: Date.now() // 🔥 cache bypass
           }
         }
       );
 
       setComplaints(res.data.complaints || []);
     } catch (err) {
-      console.error(err);
+      console.error("WAREHOUSE DASHBOARD ERROR:", err);
       alert("Failed to load warehouse dashboard");
     }
   };
 
-  /* ---------------- INITIAL LOAD ---------------- */
+  /* ============================================================= */
+  /*                     INITIAL LOAD                              */
+  /* ============================================================= */
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  /* ---------------- CLEAR FILTERS ---------------- */
+  /* ============================================================= */
+  /*                     CLEAR FILTERS                             */
+  /* ============================================================= */
 
   const clearFilters = () => {
     setComplaintCode("");
@@ -68,7 +84,9 @@ export default function WarehouseDashboard() {
     loadDashboard();
   };
 
-  /* ---------------- COMPLAINT ID SEARCH ---------------- */
+  /* ============================================================= */
+  /*                 COMPLAINT ID SEARCH                            */
+  /* ============================================================= */
 
   const handleComplaintSearchChange = (value) => {
     setComplaintCode(value);
@@ -86,7 +104,9 @@ export default function WarehouseDashboard() {
     setFilteredIds(matches);
   };
 
-  /* ---------------- STATUS CONFIG (🔥 IMPORTANT) ---------------- */
+  /* ============================================================= */
+  /*                STATUS CONFIG (IMPORTANT)                       */
+  /* ============================================================= */
 
   const SAMPLE_RECEIVED_ALLOWED = [
     "SAMPLE_DISPATCHED_FACILITY",
@@ -101,7 +121,9 @@ export default function WarehouseDashboard() {
     "REJECTED_WH"
   ];
 
-  /* ---------------- UI ---------------- */
+  /* ============================================================= */
+  /*                           UI                                  */
+  /* ============================================================= */
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -109,7 +131,10 @@ export default function WarehouseDashboard() {
 
       <div className="max-w-7xl mx-auto p-6">
 
-        {/* WELCOME */}
+        {/* ========================================================= */}
+        {/*                        WELCOME                             */}
+        {/* ========================================================= */}
+
         <div className="bg-green-50 border border-green-200 rounded px-6 py-4 mb-6 flex items-center gap-3">
           <FaWarehouse className="text-green-800 text-2xl" />
           <h2 className="text-lg font-semibold text-gray-800">
@@ -117,7 +142,10 @@ export default function WarehouseDashboard() {
           </h2>
         </div>
 
-        {/* QUICK FILTERS */}
+        {/* ========================================================= */}
+        {/*                    QUICK FILTERS                          */}
+        {/* ========================================================= */}
+
         <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
@@ -125,33 +153,34 @@ export default function WarehouseDashboard() {
               onClick={() => loadDashboard("PHYSICAL")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
             >
-              <FaBoxOpen />
-              Physical
+              <FaBoxOpen /> Physical
             </button>
 
             <button
               onClick={() => loadDashboard("ADR")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
             >
-              <FaHeartbeat />
-              ADR
+              <FaHeartbeat /> ADR
             </button>
 
             <button
               onClick={() => loadDashboard("QUALITY")}
               className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
             >
-              <FaExclamationTriangle />
-              Poor Quality
+              <FaExclamationTriangle /> Poor Quality
             </button>
 
           </div>
         </div>
 
-        {/* FILTER CARD */}
+        {/* ========================================================= */}
+        {/*                     FILTER CARD                           */}
+        {/* ========================================================= */}
+
         <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
+            {/* Complaint ID */}
             <div className="relative">
               <label className="text-sm font-medium">Complaint ID</label>
               <input
@@ -183,6 +212,7 @@ export default function WarehouseDashboard() {
               )}
             </div>
 
+            {/* Status */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
@@ -192,31 +222,16 @@ export default function WarehouseDashboard() {
               >
                 <option value="">All</option>
                 <option value="SUBMITTED">Submitted</option>
-                <option value="SAMPLE_DISPATCHED_FACILITY">
-                  Sample Dispatched (Facility)
-                </option>
-                <option value="SAMPLE_RECEIVED_WH">
-                  Sample Received (Warehouse)
-                </option>
-                <option value="IN_PROGRESS_WH">
-                  In Progress (Warehouse)
-                </option>
-                <option value="REJECTED_WH">
-                  Rejected (Warehouse)
-                </option>
-                <option value="SAMPLE_DISPATCHED_WH">
-                  Sample Dispatched (Warehouse)
-                </option>
-                <option value="SAMPLE_RECEIVED_QC">
-                  Sample Received (QC)
-                </option>
-                <option value="IN_PROGRESS_QC">
-                  In Progress (QC)
-                </option>
+                <option value="SAMPLE_DISPATCHED_FACILITY">Sample Dispatched (Facility)</option>
+                <option value="SAMPLE_RECEIVED_WH">Sample Received (Warehouse)</option>
+                <option value="IN_PROGRESS_WH">In Progress (Warehouse)</option>
+                <option value="REJECTED_WH">Rejected (Warehouse)</option>
+                <option value="SAMPLE_DISPATCHED_WH">Sample Dispatched (Warehouse)</option>
                 <option value="RESOLVED">Resolved</option>
               </select>
             </div>
 
+            {/* From Date */}
             <div>
               <label className="text-sm font-medium">From Date</label>
               <input
@@ -227,6 +242,7 @@ export default function WarehouseDashboard() {
               />
             </div>
 
+            {/* To Date */}
             <div>
               <label className="text-sm font-medium">To Date</label>
               <input
@@ -239,23 +255,19 @@ export default function WarehouseDashboard() {
           </div>
 
           <div className="flex justify-end gap-3 mt-4">
-            <button
-              onClick={clearFilters}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
-            >
+            <button onClick={clearFilters} className="bg-orange-500 text-white px-6 py-2 rounded">
               Clear Filters
             </button>
-
-            <button
-              onClick={() => loadDashboard()}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
-            >
+            <button onClick={() => loadDashboard()} className="bg-orange-500 text-white px-6 py-2 rounded">
               Apply
             </button>
           </div>
         </div>
 
-        {/* TABLE */}
+        {/* ========================================================= */}
+        {/*                        TABLE                               */}
+        {/* ========================================================= */}
+
         <div className="bg-white border rounded overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-orange-500 text-white">
@@ -283,114 +295,88 @@ export default function WarehouseDashboard() {
                 </tr>
               )}
 
-              {complaints.map((c) => {
-                const disableAction = DISABLE_WAREHOUSE_ACTION.includes(c.status);
+              {complaints.map((c) => (
+                <tr key={c.complaint_code} className="border-t">
 
-                return (
-                  <tr key={c.complaint_code} className="border-t">
-                    <td className="p-3">{c.complaint_code}</td>
-                    <td className="p-3">{c.complaint_type}</td>
-                    <td className="p-3">{c.category}</td>
-                    <td className="p-3">{c.facility_name}</td>
-                    <td className="p-3">{c.item_name}</td>
-                    <td className="p-3">{c.batch_no}</td>
-                    <td className="p-3">{c.warehouse_code}</td>
-                    <td className="p-3">{c.status}</td>
-                    <td className="p-3">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
+                  <td className="p-3">{c.complaint_code}</td>
+                  <td className="p-3">{c.complaint_type}</td>
+                  <td className="p-3">{c.category}</td>
+                  <td className="p-3">{c.facility_name}</td>
+                  <td className="p-3">{c.item_name}</td>
+                  <td className="p-3">{c.batch_no}</td>
+                  <td className="p-3">{c.warehouse_code}</td>
+                  <td className="p-3">{c.status}</td>
+                  <td className="p-3">{new Date(c.created_at).toLocaleDateString()}</td>
 
-                    <td className="p-3 space-y-1">
-                      <button
-                        onClick={() =>
-                          navigate(`/complaint/view/${c.complaint_code}`)
+                  {/* VIEW */}
+                  <td className="p-3 space-y-1">
+                    
+
+                    <button
+                      onClick={() => navigate(`/warehouse/assessment/view/${c.complaint_code}`)}
+                      className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
+                    >
+                      View (Warehouse)
+                    </button>
+                  </td>
+
+                  {/* ACTION */}
+                  <td className="p-3">
+                    <button
+                      disabled={DISABLE_WAREHOUSE_ACTION.includes(c.status)}
+                      onClick={() => {
+
+                        if (SAMPLE_RECEIVED_ALLOWED.includes(c.status)) {
+                          navigate(`/warehouse/sample-received/${c.complaint_code}`);
+                          return;
                         }
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-xs w-full"
-                      >
-                        View (Facility)
-                      </button>
 
-                      <button
-                        onClick={() =>
-                           navigate(`/warehouse/assessment/view/${c.complaint_code}`)
+                        if (c.status === "SAMPLE_RECEIVED_WH") {
+                          navigate(`/warehouse/approve-reject/${c.complaint_code}`);
+                          return;
                         }
-                        className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
-                      >
-                         View (Warehouse)
-                      </button>
 
-                    </td>
+                        if (c.status === "IN_PROGRESS_WH") {
+                          api
+  .get(
+    `/grievance/warehouse/assessment/view/${c.complaint_code}`
+  )
 
-                    <td className="p-3">
-  <button
-    disabled={DISABLE_WAREHOUSE_ACTION.includes(c.status)}
-    onClick={() => {
-      console.log("STATUS:", c.status);
+                            .then((res) => {
+                              const assessment = res.data.assessment;
 
-      // 1️⃣ Facility se sample aaya → receive page
-      if (SAMPLE_RECEIVED_ALLOWED.includes(c.status)) {
-        navigate(`/warehouse/sample-received/${c.complaint_code}`);
-        return;
-      }
+                              if (!assessment) {
+                                if (c.complaint_type === "PHYSICAL") {
+                                  navigate(`/warehouse/action/physical/${c.complaint_code}`);
+                                } else if (c.complaint_type === "ADR") {
+                                  navigate(`/warehouse/action/adr/${c.complaint_code}`);
+                                } else {
+                                  navigate(`/warehouse/action/quality/${c.complaint_code}`);
+                                }
+                                return;
+                              }
 
-      // 2️⃣ Sample received → approve / reject
-      if (c.status === "SAMPLE_RECEIVED_WH") {
-        navigate(`/warehouse/approve-reject/${c.complaint_code}`);
-        return;
-      }
+                              if (c.complaint_type === "PHYSICAL") {
+                                navigate(`/warehouse/action/resolve/${c.complaint_code}`);
+                              } else {
+                                navigate(`/warehouse/action/dispatch/${c.complaint_code}`);
+                              }
+                            })
+                            .catch(() => alert("Unable to check warehouse assessment"));
+                        }
+                      }}
+                      className={`px-3 py-1 rounded text-xs text-white w-full ${
+                        DISABLE_WAREHOUSE_ACTION.includes(c.status)
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-orange-500"
+                      }`}
+                    >
+                      Warehouse Action
+                    </button>
+                  </td>
 
-      // 3️⃣ In progress → DIRECT assessment form (type decider)
-      // 3️⃣ In progress (decision point)
-// 3️⃣ In progress (decision point)
-if (c.status === "IN_PROGRESS_WH") {
-  // 🔥 step-1: assessment data fetch (same API as WarehouseAssessmentView)
-  axios
-    .get(
-      `http://localhost:5000/api/grievance/warehouse/assessment/view/${c.complaint_code}`
-    )
-    .then((res) => {
-      const assessment = res.data.assessment;
-
-      // ❌ assessment hi nahi hai → form
-      if (!assessment || !assessment.po_no || !assessment.tender_no) {
-        if (c.complaint_type === "PHYSICAL") {
-          navigate(`/warehouse/action/physical/${c.complaint_code}`);
-        } else if (c.complaint_type === "ADR") {
-          navigate(`/warehouse/action/adr/${c.complaint_code}`);
-        } else {
-          navigate(`/warehouse/action/quality/${c.complaint_code}`);
-        }
-        return;
-      }
-
-      // ✅ assessment completed → next stage
-      if (c.complaint_type === "PHYSICAL") {
-        navigate(`/warehouse/action/resolve/${c.complaint_code}`);
-      } else {
-        navigate(`/warehouse/action/dispatch/${c.complaint_code}`);
-      }
-    })
-    .catch(() => {
-      alert("Unable to check warehouse assessment");
-    });
-
-  return;
-}
-
-    }}
-    className={`px-3 py-1 rounded text-xs text-white w-full ${
-      DISABLE_WAREHOUSE_ACTION.includes(c.status)
-        ? "bg-gray-400 cursor-not-allowed"
-        : "bg-orange-500"
-    }`}
-  >
-    Warehouse Action
-  </button>
-</td>
-
-                  </tr>
-                );
-              })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 
 export default function WarehouseSampleReceived() {
@@ -14,9 +14,10 @@ export default function WarehouseSampleReceived() {
   /* ---------------- LOAD COMPLAINT ---------------- */
 
   const loadComplaint = async () => {
-    const res = await axios.get(
-      `http://localhost:5000/api/grievance/complaint-user/view/${code}`
-    );
+    const res = await api.get(
+  `/grievance/complaint-user/view/${code}`
+);
+
     setComplaint(res.data);
   };
 
@@ -29,10 +30,8 @@ export default function WarehouseSampleReceived() {
   const handleReceiveSample = async () => {
     setLoading(true);
 
-    await axios.post(
-      "http://localhost:5000/api/grievance/warehouse/receive-sample",
-      {
-        complaint_code: code,
+    await api.post("/grievance/warehouse/receive-sample", {
+  complaint_code: code,
         status: "SAMPLE_RECEIVED_WH"
       }
     );

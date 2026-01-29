@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 
 export default function WarehouseApproveReject() {
@@ -13,37 +13,35 @@ export default function WarehouseApproveReject() {
 
   /* ---------------- LOAD COMPLAINT ---------------- */
   useEffect(() => {
-    axios
-      .get(`http://localhost:5000/api/grievance/complaint-user/view/${code}`)
-      .then((res) => setComplaint(res.data))
+    api
+  .get(`/grievance/complaint-user/view/${code}`)
+  .then((res) => setComplaint(res.data))
+
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
   /* ---------------- APPROVE ---------------- */
   const handleApprove = async () => {
-    await axios.post(
-      "http://localhost:5000/api/grievance/warehouse/approve",
+    await api.post(
+  "/grievance/warehouse/approve",
       { complaint_code: code }
     );
 
-    // update UI instantly
     setComplaint((prev) => ({
       ...prev,
       status: "IN_PROGRESS_WH"
     }));
 
-    // show success page (same like sample receive)
     setShowApproveSuccess(true);
   };
 
   /* ---------------- REJECT ---------------- */
   const handleReject = async () => {
-    await axios.post(
-      "http://localhost:5000/api/grievance/warehouse/reject",
+    await api.post(
+  "/grievance/warehouse/reject",
       { complaint_code: code }
     );
 
-    // update UI instantly
     setComplaint((prev) => ({
       ...prev,
       status: "REJECTED_WH"
@@ -60,9 +58,19 @@ export default function WarehouseApproveReject() {
 
       <div className="max-w-4xl mx-auto bg-white mt-6 p-6 rounded shadow">
 
-        <h2 className="text-xl font-semibold mb-4">
-          Warehouse Approval – {complaint.complaint_code}
-        </h2>
+        {/* ===== HEADER WITH BACK BUTTON (TOP RIGHT) ===== */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">
+            Warehouse Approval – {complaint.complaint_code}
+          </h2>
+
+          <button
+            onClick={() => navigate("/warehouse")}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+          >
+            Back to Dashboard
+          </button>
+        </div>
 
         {/* COMPLAINT DETAILS */}
         <div className="grid grid-cols-2 gap-4 text-sm mb-6">
@@ -114,17 +122,10 @@ export default function WarehouseApproveReject() {
             <h3 className="text-red-600 font-semibold text-lg mb-4">
               ❌ Complaint Rejected
             </h3>
-
-            <button
-              onClick={() => navigate("/warehouse")}
-              className="px-6 py-2 bg-gray-600 text-white rounded"
-            >
-              Back to Dashboard
-            </button>
           </div>
         )}
 
-        {/* APPROVE SUCCESS STATE (SAME AS SAMPLE RECEIVE) */}
+        {/* APPROVE SUCCESS STATE */}
         {showApproveSuccess && (
           <div className="text-center">
             <h3 className="text-green-700 font-semibold text-lg mb-4">
@@ -137,28 +138,19 @@ export default function WarehouseApproveReject() {
 
             <div className="flex justify-center gap-6">
               <button
-                onClick={() => navigate("/warehouse")}
-                className="px-6 py-2 bg-gray-500 text-white rounded"
+                onClick={() => {
+                  if (complaint.complaint_type === "PHYSICAL") {
+                    navigate(`/warehouse/action/physical/${code}`);
+                  } else if (complaint.complaint_type === "ADR") {
+                    navigate(`/warehouse/action/adr/${code}`);
+                  } else {
+                    navigate(`/warehouse/action/quality/${code}`);
+                  }
+                }}
+                className="px-6 py-2 bg-green-600 text-white rounded"
               >
-                Back to Dashboard
+                Next Stage
               </button>
-
-             <button
-  onClick={() => {
-    if (complaint.complaint_type === "PHYSICAL") {
-      navigate(`/warehouse/action/physical/${code}`);
-    } else if (complaint.complaint_type === "ADR") {
-      navigate(`/warehouse/action/adr/${code}`);
-    } else {
-      navigate(`/warehouse/action/quality/${code}`);
-    }
-  }}
-  className="px-6 py-2 bg-green-600 text-white rounded"
->
-  Next Stage
-</button>
-
-
             </div>
           </div>
         )}

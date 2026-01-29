@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api.js";
+
 import GovHeader from "../../components/GovHeader";
 
 /* 🔹 ICONS */
@@ -21,7 +22,7 @@ const items = [
 const batches = [
   {
     batchNo: "BATCH001",
-    warehouseBatch: "WH-001",
+    warehouse_code: "WH-001",
     mfg: "2024-01-10",
     exp: "2026-01-09",
     purchase: "2024-02-01",
@@ -29,7 +30,7 @@ const batches = [
   },
   {
     batchNo: "BATCH002",
-    warehouseBatch: "WH-002",
+    warehouse_code: "WH-002",
     mfg: "2023-12-15",
     exp: "2025-12-14",
     purchase: "2024-01-20",
@@ -181,7 +182,6 @@ function TypeCard({ title, description, onClick, icon: Icon }) {
 function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintType }) {
   const navigate = useNavigate();
 
-  const [facilityQuery, setFacilityQuery] = useState("");
   const [facility, setFacility] = useState(null);
 
   const [itemCodeQuery, setItemCodeQuery] = useState("");
@@ -194,10 +194,16 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
   const [qty, setQty] = useState("");
   const [description, setDescription] = useState("");
   const [documents, setDocuments] = useState([]);
+  useEffect(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
 
-  const facilityResults = facilities.filter(f =>
-    f.name.toLowerCase().includes(facilityQuery.toLowerCase())
-  );
+  if (user?.facility_name && user?.facility_address) {
+    setFacility({
+      name: user.facility_name,
+      address: user.facility_address,
+    });
+  }
+}, []);
 
   const itemResults = items.filter(i =>
     i.code.toLowerCase().includes(itemCodeQuery.toLowerCase())
@@ -259,11 +265,12 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
         formData.append("documents", file);
       });
 
-      const res = await axios.post(
-        "http://localhost:5000/api/grievance/complaint-user/create",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+     const res = await api.post(
+  "/grievance/complaint-user/create",
+  formData
+);
+
+
 
       const complaintCode = res.data.complaint_code;
       alert("Complaint submitted successfully");
@@ -283,23 +290,18 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
       <div className="p-6 space-y-6">
 
-        <Section title="Facility Details">
-          <DropdownInput
-            label="Facility Name *"
-            value={facilityQuery}
-            onChange={(v) => {
-              setFacilityQuery(v);
-              setFacility(null);
-            }}
-            results={facilityResults.map(f => f.name)}
-            onSelect={(name) => {
-              const f = facilities.find(x => x.name === name);
-              setFacility(f);
-              setFacilityQuery(f.name);
-            }}
-          />
-          <ReadOnlyInput label="Facility Address *" value={facility?.address || ""} />
-        </Section>
+      <Section title="Facility Details">
+  <ReadOnlyInput
+    label="Facility Name *"
+    value={facility?.name || ""}
+  />
+
+  <ReadOnlyInput
+    label="Facility Address *"
+    value={facility?.address || ""}
+  />
+</Section>
+
 
         <Section title="Item Details">
           <DropdownInput
@@ -334,7 +336,7 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
               setBatchQuery(b.batchNo);
             }}
           />
-          <ReadOnlyInput label="Warehouse Batch No" value={batch?.warehouseBatch || ""} />
+          <ReadOnlyInput label="Warehouse Batch No" value={batch?.warehouse_code || ""} />
         </Section>
 
         <Section title="Date Information">

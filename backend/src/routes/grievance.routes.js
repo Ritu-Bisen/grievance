@@ -1,6 +1,8 @@
 import express from "express";
 import multer from "multer";
 
+/* ================= CONTROLLERS ================= */
+
 import {
   createComplaint,
   complaintDashboard,
@@ -15,12 +17,14 @@ import {
   rejectWarehouse,
   submitWarehouseAssessment,
   viewWarehouseAssessment,
-  resolveComplaint,          // 🔥 ADDED
-  dispatchSample             // 🔥 ADDED
+  resolveComplaint,
+  dispatchSample
 } from "../controllers/warehouse.controllers.js";
 
+/* ================= MIDDLEWARES ================= */
+
 import { assessmentUpload } from "../middlewares/assessmentUpload.js";
-import Auth from "../middlewares/Auth.js";   // ✅ REQUIRED for dashboard
+import { authenticate as Auth } from "../middlewares/Auth.js";
 
 const router = express.Router();
 
@@ -41,38 +45,42 @@ const upload = multer({
 /*                 FACILITY / COMPLAINT ROUTES                   */
 /* ============================================================= */
 
-// Create complaint (with documents)
+// ✅ Create complaint (FACILITY only)
 router.post(
   "/complaint-user/create",
+  Auth,                         // 🔥 REQUIRED
   upload.array("documents"),
   createComplaint
 );
 
-// View complaint (details + documents)
-router.get(
-  "/complaint-user/view/:code",
-  viewComplaint
-);
-
-// Complaint dashboard (user)
+// ✅ Complaint dashboard (FACILITY only)
 router.get(
   "/complaint-user/dashboard",
+  Auth,                         // 🔥 THIS FIXES req.user undefined
   complaintDashboard
+);
+
+// View complaint (logged user)
+router.get(
+  "/complaint-user/view/:code",
+  Auth,
+  viewComplaint
 );
 
 // Download complaint document
 router.get(
   "/complaint-user/download/:filename",
+  
   (req, res) => {
     const { filename } = req.params;
-    const filePath = `uploads/${filename}`;
-    res.download(filePath);
+    res.download(`uploads/${filename}`);
   }
 );
 
 // Dispatch sample from facility
 router.post(
   "/complaint-user/dispatch-facility",
+  Auth,
   dispatchFromFacility
 );
 
@@ -80,28 +88,27 @@ router.post(
 /*                     WAREHOUSE ROUTES                          */
 /* ============================================================= */
 
-// ✅ Warehouse dashboard (Auth REQUIRED)
 router.get(
   "/warehouse/dashboard",
   Auth,
   warehouseDashboard
 );
 
-// ✅ Receive sample at warehouse
 router.post(
   "/warehouse/receive-sample",
+  Auth,
   receiveSampleWarehouse
 );
 
-// Approve complaint (warehouse)
 router.post(
   "/warehouse/approve",
+  Auth,
   approveWarehouse
 );
 
-// Reject complaint (warehouse)
 router.post(
   "/warehouse/reject",
+  Auth,
   rejectWarehouse
 );
 
@@ -109,35 +116,42 @@ router.post(
 /*                 WAREHOUSE ASSESSMENT ROUTES                   */
 /* ============================================================= */
 
-// Submit warehouse assessment (PHYSICAL / ADR / QUALITY)
-// max 5 documents
 router.post(
   "/warehouse/assessment/submit",
+  Auth,
   assessmentUpload.array("documents", 5),
   submitWarehouseAssessment
 );
 
-// View warehouse assessment
-// (complaint details + assessment + uploaded documents)
 router.get(
   "/warehouse/assessment/view/:complaintCode",
+  Auth,
   viewWarehouseAssessment
 );
 
 /* ============================================================= */
-/*              FINAL WAREHOUSE ACTION ROUTES 🔥                 */
+/*              FINAL WAREHOUSE ACTION ROUTES                    */
 /* ============================================================= */
 
-// Resolve Physical Complaint
 router.post(
   "/warehouse/resolve",
+  Auth,
   resolveComplaint
 );
 
-// Dispatch Sample (ADR / QUALITY)
 router.post(
   "/warehouse/dispatch",
+  Auth,
   dispatchSample
+);
+// Download warehouse assessment document (NO AUTH)
+router.get(
+  "/warehouse/assessment/download/:filename",
+  (req, res) => {
+    const { filename } = req.params;
+    const filePath = `uploads/assessment/${filename}`;
+    res.download(filePath);
+  }
 );
 
 export default router;

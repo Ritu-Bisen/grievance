@@ -11,10 +11,12 @@ export const warehouseDashboardService = async (query, user) => {
     complaintType
   } = query;
 
-  const { warehouseCode } = user;
+  // ✅ FIX HERE
+  const { warehouse_code } = user;
 
   // 🔒 Security check
-  if (!warehouseCode) {
+  if (!warehouse_code) {
+    console.error("USER CONTEXT:", user); // 🔥 debug help
     throw new Error("Warehouse code missing in user context");
   }
 
@@ -33,7 +35,7 @@ export const warehouseDashboardService = async (query, user) => {
     WHERE warehouse_code = ?
   `;
 
-  const params = [warehouseCode];
+  const params = [warehouse_code];
 
   /* ---------- OPTIONAL FILTERS ---------- */
 

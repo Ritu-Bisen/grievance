@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 import ComplaintTopSection from "../../components/ComplaintTopSection";
 
@@ -14,9 +14,9 @@ export default function WarehouseResolveAction() {
 
   /* ================= LOAD COMPLAINT ================= */
   useEffect(() => {
-    axios
-      .get(`http://localhost:5000/api/grievance/complaint-user/view/${code}`)
-      .then((res) => setComplaint(res.data))
+    api
+  .get(`/grievance/complaint-user/view/${code}`)
+  .then((res) => setComplaint(res.data))
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
@@ -30,8 +30,8 @@ export default function WarehouseResolveAction() {
 
       setSubmitting(true);
 
-      await axios.post(
-        "http://localhost:5000/api/grievance/warehouse/resolve",
+      await api.post(
+  "/grievance/warehouse/resolve",
         {
           complaint_code: code,
           resolution_remark: resolutionRemark
