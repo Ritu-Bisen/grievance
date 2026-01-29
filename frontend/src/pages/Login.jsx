@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import GovHeader from "../components/GovHeader";
+import LoginHeader from "../components/LoginHeader";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,6 +9,19 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // 🔒 If already logged in, do not show login page
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (token && role) {
+      if (role === "WAREHOUSE") navigate("/warehouse", { replace: true });
+      else if (role === "FACILITY") navigate("/complaint/dashboard", { replace: true });
+      else if (role === "QC") navigate("/qc/dashboard", { replace: true });
+      else if (role === "ADMIN") navigate("/admin/dashboard", { replace: true });
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,11 +35,10 @@ export default function Login() {
 
       const data = res.data;
 
-      // 🔐 save token + role
+      // 🔐 save auth data
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
 
-      // ✅ save COMPLETE user object (VERY IMPORTANT)
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -38,15 +50,15 @@ export default function Login() {
         })
       );
 
-      // 🚦 role-based redirect
+      // 🚦 redirect WITH history replace (IMPORTANT)
       if (data.role === "WAREHOUSE") {
-        navigate("/warehouse");
+        navigate("/warehouse", { replace: true });
       } else if (data.role === "FACILITY") {
-        navigate("/complaint/dashboard");
+        navigate("/complaint/dashboard", { replace: true });
       } else if (data.role === "QC") {
-        navigate("/qc/dashboard");
+        navigate("/qc/dashboard", { replace: true });
       } else if (data.role === "ADMIN") {
-        navigate("/admin/dashboard");
+        navigate("/admin/dashboard", { replace: true });
       }
 
     } catch (err) {
@@ -56,10 +68,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ✅ HEADER */}
-      <GovHeader />
+      <LoginHeader />
 
-      {/* ✅ LOGIN FORM */}
       <div className="flex items-center justify-center mt-10">
         <form
           onSubmit={handleLogin}
