@@ -71,6 +71,10 @@ export default function ComplaintTopSection({ complaint }) {
           <div><b>Item Name:</b> {complaint.item_name}</div>
           <div><b>Item Code:</b> {complaint.item_code}</div>
           <div><b>Batch No:</b> {complaint.batch_no}</div>
+          <div>
+  <b>Warehouse Code:</b>{" "}
+  {complaint.warehouse_code || "—"}
+</div>
           <div><b>Status:</b> {complaint.status}</div>
 
           {/* ✅ ADDED: CREATED DATE */}

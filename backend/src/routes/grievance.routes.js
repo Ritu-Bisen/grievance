@@ -21,6 +21,11 @@ import {
   dispatchSample
 } from "../controllers/warehouse.controllers.js";
 
+import {
+  adminDashboard,
+  adminReportView          // 🔥 ADD THIS
+} from "../controllers/admin.controllers.js";
+
 /* ================= MIDDLEWARES ================= */
 
 import { assessmentUpload } from "../middlewares/assessmentUpload.js";
@@ -45,39 +50,33 @@ const upload = multer({
 /*                 FACILITY / COMPLAINT ROUTES                   */
 /* ============================================================= */
 
-// ✅ Create complaint (FACILITY only)
 router.post(
   "/complaint-user/create",
-  Auth,                         // 🔥 REQUIRED
+  Auth,
   upload.array("documents"),
   createComplaint
 );
 
-// ✅ Complaint dashboard (FACILITY only)
 router.get(
   "/complaint-user/dashboard",
-  Auth,                         // 🔥 THIS FIXES req.user undefined
+  Auth,
   complaintDashboard
 );
 
-// View complaint (logged user)
 router.get(
   "/complaint-user/view/:code",
   Auth,
   viewComplaint
 );
 
-// Download complaint document
 router.get(
   "/complaint-user/download/:filename",
-  
   (req, res) => {
     const { filename } = req.params;
     res.download(`uploads/${filename}`);
   }
 );
 
-// Dispatch sample from facility
 router.post(
   "/complaint-user/dispatch-facility",
   Auth,
@@ -129,6 +128,15 @@ router.get(
   viewWarehouseAssessment
 );
 
+/* 🔽 DOWNLOAD ASSESSMENT DOC */
+router.get(
+  "/warehouse/assessment/download/:filename",
+  (req, res) => {
+    const { filename } = req.params;
+    res.download(`uploads/assessment/${filename}`);
+  }
+);
+
 /* ============================================================= */
 /*              FINAL WAREHOUSE ACTION ROUTES                    */
 /* ============================================================= */
@@ -144,14 +152,22 @@ router.post(
   Auth,
   dispatchSample
 );
-// Download warehouse assessment document (NO AUTH)
+
+/* ============================================================= */
+/*                        ADMIN ROUTES                           */
+/* ============================================================= */
+
 router.get(
-  "/warehouse/assessment/download/:filename",
-  (req, res) => {
-    const { filename } = req.params;
-    const filePath = `uploads/assessment/${filename}`;
-    res.download(filePath);
-  }
+  "/admin/dashboard",
+  Auth,
+  adminDashboard
+);
+
+/* ✅ CORRECT ADMIN REPORT VIEW */
+router.get(
+  "/admin/report/view/:complaintCode",
+  Auth,
+  adminReportView
 );
 
 export default router;

@@ -5,6 +5,10 @@ import { Toaster } from "sonner";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminReportView from "./pages/admin/AdminReportView";
+
+
 /* ================= WAREHOUSE ================= */
 import WarehouseDashboard from "./pages/warehouse/WarehouseDashboard";
 import WarehouseSampleReceived from "./pages/warehouse/WarehouseSampleReceived";
@@ -25,6 +29,7 @@ import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
 
 import "./App.css";
+
 
 function App() {
   return (
@@ -176,6 +181,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/report/view/:code" element={<AdminReportView />} />
+
 
           <Route
             path="/complaint/dispatch/:complaintCode"
