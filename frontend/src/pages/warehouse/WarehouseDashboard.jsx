@@ -3,8 +3,8 @@
 /* ============================================================= */
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";                   // ✅ REQUIRED (assessment check)
-import api from "../../services/api.js";          // ✅ TOKEN INTERCEPTOR
+import { useNavigate } from "react-router-dom";
+import api from "../../services/api.js";
 import GovHeader from "../../components/GovHeader";
 
 import {
@@ -21,9 +21,7 @@ import {
 export default function WarehouseDashboard() {
   const navigate = useNavigate();
 
-  /* ============================================================= */
-  /*                          STATE                                */
-  /* ============================================================= */
+  /* ======================= STATE ============================== */
 
   const [complaints, setComplaints] = useState([]);
 
@@ -35,25 +33,20 @@ export default function WarehouseDashboard() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
 
-  /* ============================================================= */
-  /*                   LOAD DASHBOARD                              */
-  /* ============================================================= */
+  /* =================== LOAD DASHBOARD ========================= */
 
   const loadDashboard = async (complaintType = "") => {
     try {
-      const res = await api.get(
-        "/grievance/warehouse/dashboard",
-        {
-          params: {
-            complaintCode,
-            status,
-            fromDate,
-            toDate,
-            complaintType,
-            _t: Date.now() // 🔥 cache bypass
-          }
+      const res = await api.get("/grievance/warehouse/dashboard", {
+        params: {
+          complaintCode,
+          status,
+          fromDate,
+          toDate,
+          complaintType,
+          _t: Date.now()
         }
-      );
+      });
 
       setComplaints(res.data.complaints || []);
     } catch (err) {
@@ -62,17 +55,13 @@ export default function WarehouseDashboard() {
     }
   };
 
-  /* ============================================================= */
-  /*                     INITIAL LOAD                              */
-  /* ============================================================= */
+  /* =================== INITIAL LOAD =========================== */
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  /* ============================================================= */
-  /*                     CLEAR FILTERS                             */
-  /* ============================================================= */
+  /* =================== CLEAR FILTERS ========================== */
 
   const clearFilters = () => {
     setComplaintCode("");
@@ -84,9 +73,7 @@ export default function WarehouseDashboard() {
     loadDashboard();
   };
 
-  /* ============================================================= */
-  /*                 COMPLAINT ID SEARCH                            */
-  /* ============================================================= */
+  /* ================= COMPLAINT SEARCH ========================= */
 
   const handleComplaintSearchChange = (value) => {
     setComplaintCode(value);
@@ -104,9 +91,7 @@ export default function WarehouseDashboard() {
     setFilteredIds(matches);
   };
 
-  /* ============================================================= */
-  /*                STATUS CONFIG (IMPORTANT)                       */
-  /* ============================================================= */
+  /* ================= STATUS CONFIG ============================ */
 
   const SAMPLE_RECEIVED_ALLOWED = [
     "SAMPLE_DISPATCHED_FACILITY",
@@ -121,63 +106,60 @@ export default function WarehouseDashboard() {
     "REJECTED_WH"
   ];
 
-  /* ============================================================= */
-  /*                           UI                                  */
-  /* ============================================================= */
+  /* =========================== UI ============================= */
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-gray-50 to-orange-50">
       <GovHeader />
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
 
-        {/* ========================================================= */}
-        {/*                        WELCOME                             */}
-        {/* ========================================================= */}
-
-        <div className="bg-green-50 border border-green-200 rounded px-6 py-4 mb-6 flex items-center gap-3">
-          <FaWarehouse className="text-green-800 text-2xl" />
-          <h2 className="text-lg font-semibold text-gray-800">
-            Welcome to Warehouse Dashboard
-          </h2>
-        </div>
-
-        {/* ========================================================= */}
-        {/*                    QUICK FILTERS                          */}
-        {/* ========================================================= */}
-
-        <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            <button
-              onClick={() => loadDashboard("PHYSICAL")}
-              className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
-            >
-              <FaBoxOpen /> Physical
-            </button>
-
-            <button
-              onClick={() => loadDashboard("ADR")}
-              className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
-            >
-              <FaHeartbeat /> ADR
-            </button>
-
-            <button
-              onClick={() => loadDashboard("QUALITY")}
-              className="flex items-center justify-center gap-3 bg-green-800 text-white font-bold py-4 rounded hover:bg-green-900"
-            >
-              <FaExclamationTriangle /> Poor Quality
-            </button>
-
+        {/* ================= WELCOME ================= */}
+        <div className="flex items-center gap-4 bg-white shadow-lg border-l-8 border-green-700 rounded-lg px-6 py-4">
+          <FaWarehouse className="text-green-800 text-3xl" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">
+              Warehouse Dashboard
+            </h2>
+            <p className="text-sm text-gray-500">
+              Manage & process warehouse complaints
+            </p>
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/*                     FILTER CARD                           */}
-        {/* ========================================================= */}
+        {/* ================= QUICK FILTERS ================= */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <button
+            onClick={() => loadDashboard("PHYSICAL")}
+            className="bg-gradient-to-r from-green-700 to-green-900 text-white py-5 rounded-xl shadow-lg hover:scale-105 transition"
+          >
+            <FaBoxOpen className="mx-auto text-2xl mb-2" />
+            <span className="font-bold">Physical</span>
+          </button>
 
-        <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
+          <button
+            onClick={() => loadDashboard("ADR")}
+            className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white py-5 rounded-xl shadow-lg hover:scale-105 transition"
+          >
+            <FaHeartbeat className="mx-auto text-2xl mb-2" />
+            <span className="font-bold">ADR</span>
+          </button>
+
+          <button
+            onClick={() => loadDashboard("QUALITY")}
+            className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-5 rounded-xl shadow-lg hover:scale-105 transition"
+          >
+            <FaExclamationTriangle className="mx-auto text-2xl mb-2" />
+            <span className="font-bold">Poor Quality</span>
+          </button>
+        </div>
+
+        {/* ================= FILTER CARD ================= */}
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+          <h3 className="font-semibold text-gray-700 border-b pb-2">
+            Filters
+          </h3>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
             {/* Complaint ID */}
@@ -190,12 +172,12 @@ export default function WarehouseDashboard() {
                   setShowDropdown(true);
                   setFilteredIds(complaints);
                 }}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg focus:ring-2 focus:ring-green-600"
                 placeholder="Enter Complaint ID"
               />
 
               {showDropdown && filteredIds.length > 0 && (
-                <div className="absolute bg-white border w-full mt-1 rounded shadow z-10 max-h-40 overflow-y-auto">
+                <div className="absolute bg-white border w-full mt-1 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
                   {filteredIds.map((c) => (
                     <div
                       key={c.complaint_code}
@@ -203,7 +185,7 @@ export default function WarehouseDashboard() {
                         setComplaintCode(c.complaint_code);
                         setShowDropdown(false);
                       }}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                      className="px-3 py-2 cursor-pointer hover:bg-green-50"
                     >
                       {c.complaint_code}
                     </div>
@@ -218,7 +200,7 @@ export default function WarehouseDashboard() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg"
               >
                 <option value="">All</option>
                 <option value="SUBMITTED">Submitted</option>
@@ -231,58 +213,55 @@ export default function WarehouseDashboard() {
               </select>
             </div>
 
-            {/* From Date */}
+            {/* Dates */}
             <div>
               <label className="text-sm font-medium">From Date</label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg"
               />
             </div>
 
-            {/* To Date */}
             <div>
               <label className="text-sm font-medium">To Date</label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4">
-            <button onClick={clearFilters} className="bg-orange-500 text-white px-6 py-2 rounded">
-              Clear Filters
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={clearFilters}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg"
+            >
+              Clear
             </button>
-            <button onClick={() => loadDashboard()} className="bg-orange-500 text-white px-6 py-2 rounded">
+            <button
+              onClick={() => loadDashboard()}
+              className="bg-orange-500 text-white px-6 py-2 rounded-lg shadow"
+            >
               Apply
             </button>
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/*                        TABLE                               */}
-        {/* ========================================================= */}
-
-        <div className="bg-white border rounded overflow-x-auto">
+        {/* ================= TABLE ================= */}
+        <div className="bg-white rounded-xl shadow-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-orange-500 text-white">
               <tr>
-                <th className="p-3">Complaint ID</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Facility</th>
-                <th className="p-3">Item</th>
-                <th className="p-3">Batch</th>
-                <th className="p-3">Warehouse</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">View</th>
-                <th className="p-3">Action</th>
+                {[
+                  "Complaint ID","Type","Category","Facility","Item",
+                  "Batch","Warehouse","Status","Date","View","Action"
+                ].map(h => (
+                  <th key={h} className="p-3 text-left">{h}</th>
+                ))}
               </tr>
             </thead>
 
@@ -295,32 +274,42 @@ export default function WarehouseDashboard() {
                 </tr>
               )}
 
-              {complaints.map((c) => (
-                <tr key={c.complaint_code} className="border-t">
-
-                  <td className="p-3">{c.complaint_code}</td>
+              {complaints.map((c, i) => (
+                <tr
+                  key={c.complaint_code}
+                  className={`border-t hover:bg-orange-50 ${
+                    i % 2 === 0 ? "bg-gray-50" : "bg-white"
+                  }`}
+                >
+                  <td className="p-3 font-medium">{c.complaint_code}</td>
                   <td className="p-3">{c.complaint_type}</td>
                   <td className="p-3">{c.category}</td>
                   <td className="p-3">{c.facility_name}</td>
                   <td className="p-3">{c.item_name}</td>
                   <td className="p-3">{c.batch_no}</td>
                   <td className="p-3">{c.warehouse_code}</td>
-                  <td className="p-3">{c.status}</td>
-                  <td className="p-3">{new Date(c.created_at).toLocaleDateString()}</td>
+                  <td className="p-3">
+                    <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                      {c.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </td>
 
                   {/* VIEW */}
-                  <td className="p-3 space-y-1">
-                    
-
+                  <td className="p-3">
                     <button
-                      onClick={() => navigate(`/warehouse/assessment/view/${c.complaint_code}`)}
+                      onClick={() =>
+                        navigate(`/warehouse/assessment/view/${c.complaint_code}`)
+                      }
                       className="bg-indigo-600 text-white px-3 py-1 rounded text-xs w-full"
                     >
-                      View (Warehouse)
+                      View
                     </button>
                   </td>
 
-                  {/* ACTION */}
+                  {/* ACTION (PURE LOGIC SAME) */}
                   <td className="p-3">
                     <button
                       disabled={DISABLE_WAREHOUSE_ACTION.includes(c.status)}
@@ -338,10 +327,7 @@ export default function WarehouseDashboard() {
 
                         if (c.status === "IN_PROGRESS_WH") {
                           api
-  .get(
-    `/grievance/warehouse/assessment/view/${c.complaint_code}`
-  )
-
+                            .get(`/grievance/warehouse/assessment/view/${c.complaint_code}`)
                             .then((res) => {
                               const assessment = res.data.assessment;
 
@@ -362,13 +348,15 @@ export default function WarehouseDashboard() {
                                 navigate(`/warehouse/action/dispatch/${c.complaint_code}`);
                               }
                             })
-                            .catch(() => alert("Unable to check warehouse assessment"));
+                            .catch(() =>
+                              alert("Unable to check warehouse assessment")
+                            );
                         }
                       }}
                       className={`px-3 py-1 rounded text-xs text-white w-full ${
                         DISABLE_WAREHOUSE_ACTION.includes(c.status)
                           ? "bg-gray-400 cursor-not-allowed"
-                          : "bg-orange-500"
+                          : "bg-orange-500 hover:bg-orange-600"
                       }`}
                     >
                       Warehouse Action
