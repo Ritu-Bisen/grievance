@@ -203,13 +203,38 @@ export default function WarehouseDashboard() {
                 className="border px-3 py-2 w-full rounded-lg"
               >
                 <option value="">All</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="SAMPLE_DISPATCHED_FACILITY">Sample Dispatched (Facility)</option>
-                <option value="SAMPLE_RECEIVED_WH">Sample Received (Warehouse)</option>
-                <option value="IN_PROGRESS_WH">In Progress (Warehouse)</option>
-                <option value="REJECTED_WH">Rejected (Warehouse)</option>
-                <option value="SAMPLE_DISPATCHED_WH">Sample Dispatched (Warehouse)</option>
-                <option value="RESOLVED">Resolved</option>
+
+  <option value="SUBMITTED">Submitted</option>
+
+  <option value="SAMPLE_DISPATCHED_FACILITY">
+    Sample Dispatched (Facility)
+  </option>
+
+  <option value="SAMPLE_RECEIVED_WH">
+    Sample Received (Warehouse)
+  </option>
+
+  <option value="IN_PROGRESS_WH">
+    In Progress (Warehouse)
+  </option>
+
+  <option value="REJECTED_WH">
+    Rejected (Warehouse)
+  </option>
+
+  <option value="SAMPLE_DISPATCHED_WH">
+    Sample Dispatched (Warehouse)
+  </option>
+
+  <option value="SAMPLE_RECEIVED_QC">
+    Sample Received (QC)
+  </option>
+
+  <option value="IN_PROGRESS_QC">
+    In Progress (QC)
+  </option>
+
+  <option value="RESOLVED">Resolved</option>
               </select>
             </div>
 
