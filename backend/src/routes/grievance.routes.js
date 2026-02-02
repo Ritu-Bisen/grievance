@@ -23,7 +23,9 @@ import {
 
 import {
   adminDashboard,
-  adminReportView          // 🔥 ADD THIS
+  adminReportView,
+  avgHandlingTime,
+  resolutionTimeGraph
 } from "../controllers/admin.controllers.js";
 
 /* ================= MIDDLEWARES ================= */
@@ -128,7 +130,6 @@ router.get(
   viewWarehouseAssessment
 );
 
-/* 🔽 DOWNLOAD ASSESSMENT DOC */
 router.get(
   "/warehouse/assessment/download/:filename",
   (req, res) => {
@@ -163,11 +164,24 @@ router.get(
   adminDashboard
 );
 
-/* ✅ CORRECT ADMIN REPORT VIEW */
 router.get(
   "/admin/report/view/:complaintCode",
   Auth,
   adminReportView
+);
+
+/* 🔥 AVG HANDLING TIME GRAPH */
+router.get(
+  "/admin/avg-handling-time",
+  Auth,
+  avgHandlingTime
+);
+
+/* 🔥 RESOLUTION TIME GRAPH */
+router.get(
+  "/admin/resolution-time-graph",
+  Auth,
+  resolutionTimeGraph
 );
 
 export default router;
