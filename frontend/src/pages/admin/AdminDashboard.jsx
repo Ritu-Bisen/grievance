@@ -326,6 +326,47 @@ const resolutionBars = [
     setComplaintType("");
     loadDashboard("", "", true);
   };
+  // ===== CSV DOWNLOAD HANDLER =====
+const handleCSVDownload = () => {
+  if (!complaints || complaints.length === 0) {
+    alert("No complaints available to download");
+    return;
+  }
+
+  const headers = [
+    "Complaint Code",
+    "Complaint Type",
+    "Facility",
+    "Item",
+    "Status",
+    "Created Date"
+  ];
+
+  const rows = complaints.map(c => [
+    c.complaint_code,
+    c.complaint_type,
+    c.facility_name,
+    c.item_name,
+    c.status,
+    new Date(c.created_at).toLocaleDateString()
+  ]);
+
+  let csvContent =
+    headers.join(",") +
+    "\n" +
+    rows.map(r => r.map(v => `"${v ?? ""}"`).join(",")).join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "complaints_report.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
   // ===== AVG BAR CLICK HANDLER (SEPARATE TABLE) =====
 const handleAvgBarClick = (moduleKey) => {
   setAvgModule(moduleKey);
@@ -372,13 +413,24 @@ const handleResolutionBarClick = (rangeKey, label) => {
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-4">
+  <button
+    onClick={handleCSVDownload}
+    className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-300 px-5 py-3 rounded-xl text-green-700 font-semibold hover:from-green-100 hover:to-emerald-200 hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+  >
+    <FaFileAlt className="text-lg" />
+    Download CSV
+  </button>
 
-          <button
-            onClick={clearFilters}
-            className="flex items-center gap-2 bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 px-5 py-3 rounded-xl text-red-700 font-semibold hover:from-red-100 hover:to-red-200 hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
-          >
-            <FaBroom className="text-lg" /> Clear Filters
-          </button>
+  <button
+    onClick={clearFilters}
+    className="flex items-center gap-2 bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 px-5 py-3 rounded-xl text-red-700 font-semibold hover:from-red-100 hover:to-red-200 hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+  >
+    <FaBroom className="text-lg" />
+    Clear Filters
+  </button>
+</div>
+
         </div>
 
         {/* ================= FILTER SECTION ================= */}
