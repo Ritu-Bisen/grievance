@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 import ComplaintTopSection from "../../components/ComplaintTopSection";
+import ComplaintLifecycle from "../../components/ComplaintLifecycle";
 import {
     FaBoxOpen,
     FaFileInvoice,
@@ -56,74 +57,12 @@ export default function QcAssessmentView() {
                     ← Back to Dashboard
                 </button>
 
-                {/* ================= WORKFLOW PROGRESS INDICATOR ================= */}
-                <div className="border rounded p-6 mb-8 bg-gray-50 border-t-4 border-t-purple-600 shadow-sm">
-                    <h3 className="text-lg font-bold mb-8 flex items-center gap-2">
-                        <FaCheckDouble className="text-purple-600" />
-                        Complaint Lifecycle Progress
-                    </h3>
-
-                    <div className="relative flex justify-between">
-                        {/* Connecting Line */}
-                        <div className="absolute top-5 left-0 w-full h-1 bg-gray-200 -z-0"></div>
-                        <div
-                            className="absolute top-5 left-0 h-1 bg-green-500 transition-all duration-500 -z-0"
-                            style={{
-                                width: qc?.status === 'Reject'
-                                    ? '66%'
-                                    : (complaint.status === 'RESOLVED' ? '100%' : (qc?.status ? '66%' : (qc?.report_received_date ? '33%' : (qc ? '0%' : '0%'))))
-                            }}
-                        ></div>
-
-                        {/* Step 1: Sample Received */}
-                        <div className="relative z-10 flex flex-col items-center flex-1">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${qc ? 'bg-green-100 border-green-500 text-green-600' : 'bg-white border-gray-300 text-gray-400'}`}>
-                                {qc ? <FaCheckCircle /> : <FaBoxOpen />}
-                            </div>
-                            <span className={`mt-2 text-xs font-bold ${qc ? 'text-green-700' : 'text-gray-500'}`}>Sample Received</span>
-                            <span className="text-[10px] text-gray-400">Step 1</span>
-                        </div>
-
-                        {/* Step 2: Report Received */}
-                        <div className="relative z-10 flex flex-col items-center flex-1">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${qc?.report_received_date ? 'bg-green-100 border-green-500 text-green-600' : 'bg-white border-gray-300 text-gray-400'}`}>
-                                {qc?.report_received_date ? <FaCheckCircle /> : <FaFileInvoice />}
-                            </div>
-                            <span className={`mt-2 text-xs font-bold ${qc?.report_received_date ? 'text-green-700' : 'text-gray-500'}`}>Report Received</span>
-                            <span className="text-[10px] text-gray-400">Step 2</span>
-                        </div>
-
-                        {/* Step 3: QC Verification */}
-                        <div className="relative z-10 flex flex-col items-center flex-1">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${qc?.status === 'Approve' ? 'bg-green-100 border-green-500 text-green-600' :
-                                qc?.status === 'Reject' ? 'bg-red-100 border-red-500 text-red-600' :
-                                    'bg-white border-gray-300 text-gray-400'
-                                }`}>
-                                {qc?.status === 'Approve' ? <FaCheckCircle /> :
-                                    qc?.status === 'Reject' ? <FaTimesCircle /> : <FaUserCheck />}
-                            </div>
-                            <span className={`mt-2 text-xs font-bold ${qc?.status ? (qc.status === 'Reject' ? 'text-red-700' : 'text-green-700') : 'text-gray-500'}`}>
-                                {qc?.status === 'Reject' ? 'Verification Rejected' : 'Verify Complaint'}
-                            </span>
-                            <span className="text-[10px] text-gray-400">Step 3</span>
-                        </div>
-
-                        {/* Step 4: Resolved */}
-                        <div className="relative z-10 flex flex-col items-center flex-1">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${(complaint.status === 'RESOLVED') ? 'bg-green-100 border-green-500 text-green-600' :
-                                (qc?.status === 'Reject' && complaint.complaint_close_date) ? 'bg-red-100 border-red-300 text-red-400' :
-                                    'bg-white border-gray-300 text-gray-400'
-                                }`}>
-                                {complaint.status === 'RESOLVED' ? <FaCheckCircle /> :
-                                    (qc?.status === 'Reject' && complaint.complaint_close_date) ? <FaTimesCircle /> : <FaCheckDouble />}
-                            </div>
-                            <span className={`mt-2 text-xs font-bold ${complaint.status === 'RESOLVED' || (qc?.status === 'Reject' && complaint.complaint_close_date) ? (qc?.status === 'Reject' ? 'text-red-400' : 'text-green-700') : 'text-gray-500'}`}>
-                                {qc?.status === 'Reject' ? 'Closed (Rejected)' : 'Complaint Resolved'}
-                            </span>
-                            <span className="text-[10px] text-gray-400">Step 4</span>
-                        </div>
-                    </div>
-                </div>
+                {/* ================= COMPLAINT LIFECYCLE ================= */}
+                <ComplaintLifecycle
+                    complaint={complaint}
+                    warehouseAssessment={assessment}
+                    qcAssessment={qc}
+                />
 
                 <ComplaintTopSection complaint={complaint} />
 

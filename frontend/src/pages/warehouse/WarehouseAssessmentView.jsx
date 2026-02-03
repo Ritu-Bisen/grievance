@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 import ComplaintTopSection from "../../components/ComplaintTopSection";
+import ComplaintLifecycle from "../../components/ComplaintLifecycle";
 
 export default function WarehouseAssessmentView() {
   const { code } = useParams();
@@ -10,18 +11,20 @@ export default function WarehouseAssessmentView() {
 
   const [complaint, setComplaint] = useState(null);
   const [assessment, setAssessment] = useState(null);
+  const [qcAssessment, setQcAssessment] = useState(null);
 
   /* 🖼 PREVIEW STATE (image / pdf / doc) */
   const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
     api
-  .get(`/grievance/warehouse/assessment/view/${code}`)
-  .then(res => {
-    setComplaint(res.data.complaint);
-    setAssessment(res.data.assessment);
-  })
-  .catch(() => alert("Failed to load warehouse assessment"));
+      .get(`/grievance/warehouse/assessment/view/${code}`)
+      .then(res => {
+        setComplaint(res.data.complaint);
+        setAssessment(res.data.assessment);
+        setQcAssessment(res.data.qcAssessment);
+      })
+      .catch(() => alert("Failed to load warehouse assessment"));
   }, [code]);
 
   if (!complaint) return null;
@@ -29,7 +32,7 @@ export default function WarehouseAssessmentView() {
   /* ---------- FILE TYPE CHECK ---------- */
   const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
   const isPDF = (name) => /\.pdf$/i.test(name);
-  
+
 
   /* ================= CSV DOWNLOAD ================= */
   const downloadCSV = () => {
@@ -47,7 +50,7 @@ export default function WarehouseAssessmentView() {
       ["COMPLAINT", "Batch No", complaint.batch_no],
       ["COMPLAINT", "Status", complaint.status],
     ];
-   
+
 
     /* ✅ Created & Resolved dates (CSV FIX) */
     if (complaint.created_at) {
@@ -196,6 +199,21 @@ export default function WarehouseAssessmentView() {
 
       <div className="max-w-6xl mx-auto bg-white mt-6 p-6 rounded shadow">
 
+        {/* BACK BUTTON */}
+        <button
+          onClick={() => navigate("/warehouse/dashboard")}
+          className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          ← Back to Dashboard
+        </button>
+
+        {/* COMPLAINT LIFECYCLE */}
+        <ComplaintLifecycle
+          complaint={complaint}
+          warehouseAssessment={assessment}
+          qcAssessment={qcAssessment}
+        />
+
         <ComplaintTopSection complaint={complaint} />
 
         {/* ✅ CSV button for REJECTED case */}
@@ -311,11 +329,11 @@ export default function WarehouseAssessmentView() {
                         </button>
 
                         <a
-  href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${doc.file_name}`}
-  className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
->
-  Download
-</a>
+                          href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${doc.file_name}`}
+                          className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                        >
+                          Download
+                        </a>
 
 
 

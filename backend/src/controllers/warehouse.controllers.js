@@ -50,16 +50,17 @@ export const receiveSampleWarehouse = async (req, res) => {
 
     await pool.execute(
       `UPDATE complaints
-       SET status = 'SAMPLE_RECEIVED_WH'
+       SET status = 'SAMPLE_RECEIVED_WH',
+           sample_received_date = NOW()
        WHERE complaint_code = ?`,
       [complaint_code]
     );
     // 🔥 STATUS LOG
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'SAMPLE_RECEIVED_WH')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
 
     res.json({ status: "SAMPLE_RECEIVED_WH" });
@@ -91,12 +92,12 @@ export const approveWarehouse = async (req, res) => {
        WHERE complaint_code = ?`,
       [complaint_code]
     );
-     // 🔥 STATUS LOG
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    // 🔥 STATUS LOG
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'IN_PROGRESS_WH')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
     res.json({ status: "IN_PROGRESS_WH" });
   } catch (err) {
@@ -130,11 +131,11 @@ export const rejectWarehouse = async (req, res) => {
       [complaint_code]
     );
     // 🔥 STATUS LOG
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'REJECTED_WH')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
 
     res.json({ status: "REJECTED_WH" });
@@ -276,6 +277,12 @@ export const viewWarehouseAssessment = async (req, res) => {
       [complaintCode]
     );
 
+    // 🔥 Fetch QC assessment for lifecycle
+    const [[qcAssessment]] = await pool.execute(
+      "SELECT * FROM qc_assessments WHERE complaint_code=?",
+      [complaintCode]
+    );
+
     res.json({
       complaint: complaint
         ? { ...complaint, documents: safeJson(complaint.documents) }
@@ -283,7 +290,9 @@ export const viewWarehouseAssessment = async (req, res) => {
 
       assessment: assessment
         ? { ...assessment, documents: safeJson(assessment.documents) }
-        : null
+        : null,
+
+      qcAssessment: qcAssessment || null
     });
   } catch (err) {
     console.error("VIEW ASSESSMENT ERROR:", err);
@@ -316,11 +325,11 @@ export const resolveComplaint = async (req, res) => {
       [resolution_remark || null, complaint_code]
     );
     // 🔥 STATUS LOG (FINAL END)
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'RESOLVED')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
 
     res.json({
@@ -355,12 +364,19 @@ export const dispatchSample = async (req, res) => {
       [remarks || null, complaint_code]
     );
     // 🔥 STATUS LOG (WAREHOUSE END / QC START)
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'SAMPLE_DISPATCHED_WH')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
+    // 🔥 UPDATE sample_dispatch_date in warehouse_assessments
+    await pool.execute(
+      `UPDATE warehouse_assessments
+       SET sample_dispatch_date = NOW()
+       WHERE complaint_code = ?`,
+      [complaint_code]
+    );
 
     res.json({ message: "Sample dispatched from warehouse" });
   } catch (err) {

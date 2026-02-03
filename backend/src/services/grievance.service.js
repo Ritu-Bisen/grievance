@@ -98,7 +98,7 @@ export const dispatchFromFacilityService = async (complaintCode, facilityName) =
     throw new Error("Dispatch not allowed");
 
   await pool.execute(
-    "UPDATE complaints SET status = ? WHERE complaint_code = ?",
+    "UPDATE complaints SET status = ?, date_of_dispatch = CURRENT_TIMESTAMP WHERE complaint_code = ?",
     ["SAMPLE_DISPATCHED_FACILITY", complaintCode]
   );
 };

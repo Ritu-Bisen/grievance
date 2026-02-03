@@ -40,11 +40,11 @@ export const createComplaint = async (req, res) => {
       documents
     );
     // 🔥 STATUS LOG (FACILITY START)
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'SUBMITTED')`,
-  [complaintCode]
-);
+      [complaintCode]
+    );
 
 
     res.status(201).json({
@@ -116,7 +116,26 @@ export const viewComplaint = async (req, res) => {
           : complaint.documents;
     }
 
-    res.json({ ...complaint, documents });
+    // 🔥 Fetch warehouse assessment for lifecycle
+    const [warehouseRows] = await pool.execute(
+      "SELECT * FROM warehouse_assessments WHERE complaint_code = ?",
+      [code]
+    );
+    const warehouseAssessment = warehouseRows.length > 0 ? warehouseRows[0] : null;
+
+    // 🔥 Fetch QC assessment for lifecycle
+    const [qcRows] = await pool.execute(
+      "SELECT * FROM qc_assessments WHERE complaint_code = ?",
+      [code]
+    );
+    const qcAssessment = qcRows.length > 0 ? qcRows[0] : null;
+
+    res.json({
+      ...complaint,
+      documents,
+      warehouseAssessment,
+      qcAssessment
+    });
 
   } catch (err) {
     console.error("❌ VIEW COMPLAINT ERROR:", err);
@@ -137,11 +156,11 @@ export const dispatchFromFacility = async (req, res) => {
       req.user.facility_name   // 🔐 enforce ownership
     );
     // 🔥 STATUS LOG (FACILITY END)
-await pool.execute(
-  `INSERT INTO complaint_status_logs (complaint_code, status)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
    VALUES (?, 'SAMPLE_DISPATCHED_FACILITY')`,
-  [complaint_code]
-);
+      [complaint_code]
+    );
 
 
     res.json({ message: "Sample dispatched successfully" });

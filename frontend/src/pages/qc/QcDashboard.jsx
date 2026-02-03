@@ -10,7 +10,8 @@ import GovHeader from "../../components/GovHeader";
 import {
     FaFlask,
     FaHeartbeat,
-    FaExclamationTriangle
+    FaExclamationTriangle,
+    FaBox
 } from "react-icons/fa";
 
 /* ============================================================= */
@@ -112,7 +113,7 @@ export default function QcDashboard() {
                 </div>
 
                 {/* ================= QUICK FILTERS ================= */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <button
                         onClick={() => loadDashboard("ADR")}
                         className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white py-5 rounded-xl shadow-lg hover:scale-105 transition"
@@ -127,6 +128,14 @@ export default function QcDashboard() {
                     >
                         <FaExclamationTriangle className="mx-auto text-2xl mb-2" />
                         <span className="font-bold">Poor Quality</span>
+                    </button>
+
+                    <button
+                        onClick={() => loadDashboard("PHYSICAL")}
+                        className="bg-gradient-to-r from-amber-500 to-amber-700 text-white py-5 rounded-xl shadow-lg hover:scale-105 transition"
+                    >
+                        <FaBox className="mx-auto text-2xl mb-2" />
+                        <span className="font-bold">Physical</span>
                     </button>
                 </div>
 
@@ -284,7 +293,12 @@ export default function QcDashboard() {
 
                                     {/* ACTION */}
                                     <td className="p-3">
-                                        {c.status === "SAMPLE_DISPATCHED_WH" ? (
+                                        {/* PHYSICAL complaints with no sample dispatch - View Only */}
+                                        {c.assessment_type === "PHYSICAL" && !c.sample_dispatch_date ? (
+                                            <span className="px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700 block text-center font-bold">
+                                                Physical (View Only)
+                                            </span>
+                                        ) : c.status === "SAMPLE_DISPATCHED_WH" ? (
                                             <button
                                                 onClick={() => {
                                                     navigate(`/qc/sample-received/${c.complaint_code}`);

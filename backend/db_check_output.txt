@@ -17,8 +17,4 @@ received_at | timestamp
 created_at | timestamp
 complaint_code | varchar(100)
 
-COLUMNS_OF_qc_assessment:
-id | int
-complaint_code | varchar(50)
-created_at | timestamp
-report_received_date | timestamp
+ERROR_qc_assessment: Table 'complaint_module.qc_assessment' doesn't exist

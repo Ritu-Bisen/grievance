@@ -206,16 +206,16 @@ export const avgHandlingTime = async (req, res) => {
       const logs = data[code];
 
       const get = (s, e) => {
-  const start = logs.find(l => l.status === s);
-  const end = logs.find(l => l.status === e);
+        const start = logs.find(l => l.status === s);
+        const end = logs.find(l => l.status === e);
 
-  if (!start) return null;
+        if (!start) return null;
 
-  // 🔥 IMPORTANT CHANGE (DYNAMIC DAYS)
-  const endTime = end ? end.changed_at : new Date();
+        // 🔥 IMPORTANT CHANGE (DYNAMIC DAYS)
+        const endTime = end ? end.changed_at : new Date();
 
-  return diffDays(start.changed_at, endTime);
-};
+        return diffDays(start.changed_at, endTime);
+      };
 
 
       // FACILITY
@@ -269,8 +269,9 @@ export const resolutionTimeGraph = async (req, res) => {
         complaint_code,
         status,
         created_at,
-        updated_at,
-        DATEDIFF(updated_at, created_at) AS days
+        resolved_at,
+        rejected_at,
+        DATEDIFF(COALESCE(resolved_at, rejected_at, NOW()), created_at) AS days
       FROM complaints
       WHERE status IN ('RESOLVED', 'REJECTED_WH')
     `);

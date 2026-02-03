@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
+import ComplaintLifecycle from "../../components/ComplaintLifecycle";
 
 export default function ComplaintView() {
   const { code } = useParams();
   const navigate = useNavigate();
   const [complaint, setComplaint] = useState(null);
+  const [warehouseAssessment, setWarehouseAssessment] = useState(null);
+  const [qcAssessment, setQcAssessment] = useState(null);
 
   /* ---------- PREVIEW STATE ---------- */
   const [previewFile, setPreviewFile] = useState(null);
@@ -14,7 +17,11 @@ export default function ComplaintView() {
   useEffect(() => {
     api
       .get(`/grievance/complaint-user/view/${code}`)
-      .then((res) => setComplaint(res.data))
+      .then((res) => {
+        setComplaint(res.data);
+        setWarehouseAssessment(res.data.warehouseAssessment);
+        setQcAssessment(res.data.qcAssessment);
+      })
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
@@ -99,6 +106,21 @@ export default function ComplaintView() {
       <GovHeader />
 
       <div className="max-w-5xl mx-auto bg-white p-6 mt-6 border rounded">
+        {/* BACK BUTTON */}
+        <button
+          onClick={() => navigate("/facility/dashboard")}
+          className="mb-4 bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
+        >
+          ← Back to Dashboard
+        </button>
+
+        {/* COMPLAINT LIFECYCLE */}
+        <ComplaintLifecycle
+          complaint={complaint}
+          warehouseAssessment={warehouseAssessment}
+          qcAssessment={qcAssessment}
+        />
+
         {/* HEADER */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Complaint Details</h2>

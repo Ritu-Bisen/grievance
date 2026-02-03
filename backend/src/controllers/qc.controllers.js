@@ -32,11 +32,12 @@ export const getQcDashboard = async (req, res) => {
         c.warehouse_code,
         c.complaint_close_date,
         wa.sample_dispatch_date,
+        wa.assessment_type,
         qa.status AS qc_status
       FROM complaints c
       INNER JOIN warehouse_assessments wa ON c.complaint_code = wa.complaint_code
       LEFT JOIN qc_assessments qa ON c.complaint_code = qa.complaint_code
-      WHERE wa.sample_dispatch_date IS NOT NULL
+      WHERE (wa.sample_dispatch_date IS NOT NULL OR wa.assessment_type = 'PHYSICAL')
     `;
 
         const params = [];
