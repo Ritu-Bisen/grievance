@@ -39,6 +39,13 @@ export const createComplaint = async (req, res) => {
       },
       documents
     );
+    // 🔥 STATUS LOG (FACILITY START)
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SUBMITTED')`,
+  [complaintCode]
+);
+
 
     res.status(201).json({
       message: "Complaint submitted successfully",
@@ -129,6 +136,13 @@ export const dispatchFromFacility = async (req, res) => {
       complaint_code,
       req.user.facility_name   // 🔐 enforce ownership
     );
+    // 🔥 STATUS LOG (FACILITY END)
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SAMPLE_DISPATCHED_FACILITY')`,
+  [complaint_code]
+);
+
 
     res.json({ message: "Sample dispatched successfully" });
 

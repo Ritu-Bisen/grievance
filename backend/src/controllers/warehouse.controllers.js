@@ -54,6 +54,13 @@ export const receiveSampleWarehouse = async (req, res) => {
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+    // 🔥 STATUS LOG
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SAMPLE_RECEIVED_WH')`,
+  [complaint_code]
+);
+
 
     res.json({ status: "SAMPLE_RECEIVED_WH" });
   } catch (err) {
@@ -84,6 +91,12 @@ export const approveWarehouse = async (req, res) => {
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+     // 🔥 STATUS LOG
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'IN_PROGRESS_WH')`,
+  [complaint_code]
+);
 
     res.json({ status: "IN_PROGRESS_WH" });
   } catch (err) {
@@ -116,6 +129,13 @@ export const rejectWarehouse = async (req, res) => {
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+    // 🔥 STATUS LOG
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'REJECTED_WH')`,
+  [complaint_code]
+);
+
 
     res.json({ status: "REJECTED_WH" });
 
@@ -295,6 +315,13 @@ export const resolveComplaint = async (req, res) => {
        WHERE complaint_code = ?`,
       [resolution_remark || null, complaint_code]
     );
+    // 🔥 STATUS LOG (FINAL END)
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'RESOLVED')`,
+  [complaint_code]
+);
+
 
     res.json({
       message: "Complaint resolved successfully"
@@ -327,6 +354,13 @@ export const dispatchSample = async (req, res) => {
        WHERE complaint_code = ?`,
       [remarks || null, complaint_code]
     );
+    // 🔥 STATUS LOG (WAREHOUSE END / QC START)
+await pool.execute(
+  `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SAMPLE_DISPATCHED_WH')`,
+  [complaint_code]
+);
+
 
     res.json({ message: "Sample dispatched from warehouse" });
   } catch (err) {
