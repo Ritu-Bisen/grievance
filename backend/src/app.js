@@ -3,6 +3,7 @@ import cors from "cors";
 
 import grievanceRoutes from "./routes/grievance.routes.js";
 import authRoutes from "./routes/auth.routes.js"; // ✅ ADD THIS
+import qcRoutes from "./routes/qc.routes.js";
 
 const app = express();
 
@@ -11,7 +12,8 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://localhost:5174"
   ],
   credentials: true
 }));
@@ -33,6 +35,7 @@ app.use((req, res, next) => {
 
 app.use("/uploads", express.static("uploads"));
 app.use("/uploads/assessment", express.static("uploads/assessment"));
+app.use("/uploads/reports", express.static("uploads/reports"));
 
 /* ================= ROUTES ================= */
 
@@ -41,6 +44,9 @@ app.use("/api/auth", authRoutes);
 
 // 📦 GRIEVANCE + FACILITY + WAREHOUSE
 app.use("/api/grievance", grievanceRoutes);
+
+// 🧪 QC ROUTES
+app.use("/api/grievance", qcRoutes);
 
 /* ================= HEALTH CHECK ================= */
 

@@ -184,9 +184,37 @@ export default function AdminDashboard() {
                 className="border px-3 py-2 w-full rounded-lg"
               >
                 <option value="">All</option>
+
                 <option value="SUBMITTED">Submitted</option>
-                <option value="IN_PROGRESS_WH">In Progress (Warehouse)</option>
-                <option value="REJECTED_WH">Rejected (Warehouse)</option>
+
+                <option value="SAMPLE_DISPATCHED_FACILITY">
+                  Sample Dispatched (Facility)
+                </option>
+
+                <option value="SAMPLE_RECEIVED_WH">
+                  Sample Received (Warehouse)
+                </option>
+
+                <option value="IN_PROGRESS_WH">
+                  In Progress (Warehouse)
+                </option>
+
+                <option value="REJECTED_WH">
+                  Rejected (Warehouse)
+                </option>
+
+                <option value="SAMPLE_DISPATCHED_WH">
+                  Sample Dispatched (Warehouse)
+                </option>
+
+                <option value="SAMPLE_RECEIVED_QC">
+                  Sample Received (QC)
+                </option>
+
+                <option value="IN_PROGRESS_QC">
+                  In Progress (QC)
+                </option>
+
                 <option value="RESOLVED">Resolved</option>
               </select>
             </div>
@@ -252,9 +280,8 @@ export default function AdminDashboard() {
               {complaints.map((c, i) => (
                 <tr
                   key={c.complaint_code}
-                  className={`border-t hover:bg-indigo-50 ${
-                    i % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  }`}
+                  className={`border-t hover:bg-indigo-50 ${i % 2 === 0 ? "bg-gray-50" : "bg-white"
+                    }`}
                 >
                   <td className="p-3 font-medium">{c.complaint_code}</td>
                   <td className="p-3">{c.complaint_type}</td>

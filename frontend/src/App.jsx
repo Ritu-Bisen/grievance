@@ -28,6 +28,14 @@ import ComplaintTypeSelection from "./pages/client/ComplaintTypeSelection";
 import ComplaintView from "./pages/client/ComplaintView";
 import DispatchSample from "./pages/client/DispatchSample";
 
+/* ================= QC ================= */
+import QcDashboard from "./pages/qc/QcDashboard";
+import QcAssessmentView from "./pages/qc/QcAssessmentView";
+import QcSampleReceived from "./pages/qc/QcSampleReceived";
+import QcReportReceived from "./pages/qc/QcReportReceived";
+import QcReview from "./pages/qc/QcReview";
+import QcResolveView from "./pages/qc/QcResolveView";
+
 import "./App.css";
 
 
@@ -150,6 +158,59 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["WAREHOUSE"]}>
                 <WarehouseAssessmentView />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ================= QC ================= */}
+          <Route
+            path="/qc/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/qc/assessment/view/:code"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcAssessmentView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/qc/sample-received/:code"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcSampleReceived />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/qc/report-received/:code"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcReportReceived />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/qc/review/:code"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcReview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/qc/resolve/:code"
+            element={
+              <ProtectedRoute allowedRoles={["QC"]}>
+                <QcResolveView />
               </ProtectedRoute>
             }
           />

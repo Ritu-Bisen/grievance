@@ -1,0 +1,115 @@
+{
+  "complaints": [
+    {
+      "complaint_code": "CMP-050AD580",
+      "status": "RESOLVED"
+    },
+    {
+      "complaint_code": "CMP-8DF4E803",
+      "status": "RESOLVED"
+    },
+    {
+      "complaint_code": "CMP-2F4768B0",
+      "status": "CLOSED"
+    },
+    {
+      "complaint_code": "CMP-2024-001",
+      "status": "CLOSED"
+    },
+    {
+      "complaint_code": "CMP-2024-002",
+      "status": "CLOSED"
+    },
+    {
+      "complaint_code": "CMP-2024-003",
+      "status": "closed"
+    },
+    {
+      "complaint_code": "CMP-B70B204D",
+      "status": "CLOSED"
+    }
+  ],
+  "CMP-050AD580": {
+    "status": "RESOLVED",
+    "qc": {
+      "id": "1d65408d-0005-11f1-be45-2107c1b23b0d",
+      "created_at": "2026-02-02T07:02:19.000Z",
+      "complaint_code": "CMP-050AD580",
+      "report_received_date": "2026-02-02T07:04:00.000Z",
+      "complaint_close_date": "2026-02-02T07:20:03.000Z",
+      "remarks": "dmeo",
+      "status": "Approve",
+      "send_report_admin": null
+    },
+    "report": {
+      "id": 17,
+      "report_pdf": "https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf",
+      "report_description": " report record created for testing.",
+      "received_at": "2026-02-02T07:04:00.000Z",
+      "created_at": "2026-02-02T14:38:29.000Z",
+      "complaint_code": "CMP-050AD580"
+    }
+  },
+  "CMP-8DF4E803": {
+    "status": "RESOLVED",
+    "qc": {
+      "id": "c2bd3392-ffff-11f0-be45-2107c1b23b0d",
+      "created_at": "2026-02-02T06:23:59.000Z",
+      "complaint_code": "CMP-8DF4E803",
+      "report_received_date": "2026-02-02T06:29:37.000Z",
+      "complaint_close_date": "2026-02-02T06:32:15.000Z",
+      "remarks": "demo ",
+      "status": "Approve",
+      "send_report_admin": null
+    },
+    "report": {
+      "id": 16,
+      "report_pdf": "https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf",
+      "report_description": "Dummy QC report record created for testing.",
+      "received_at": "2026-02-02T06:29:37.000Z",
+      "created_at": "2026-02-02T14:38:29.000Z",
+      "complaint_code": "CMP-8DF4E803"
+    }
+  },
+  "CMP-2F4768B0": {
+    "status": "CLOSED",
+    "qc": {
+      "id": "1",
+      "created_at": "2026-01-30T11:09:39.000Z",
+      "complaint_code": "CMP-2F4768B0",
+      "report_received_date": "2026-02-01T04:56:24.000Z",
+      "complaint_close_date": "2026-02-01T08:55:34.000Z",
+      "remarks": "complaint resloved",
+      "status": "Approve",
+      "send_report_admin": null
+    },
+    "report": {
+      "id": 15,
+      "report_pdf": "https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf",
+      "report_description": "Dummy QC report record created for testing.",
+      "received_at": "2026-02-01T04:56:24.000Z",
+      "created_at": "2026-01-31T14:38:29.000Z",
+      "complaint_code": "CMP-2F4768B0"
+    }
+  },
+  "CMP-2024-001": {
+    "status": "CLOSED",
+    "qc": null,
+    "report": null
+  },
+  "CMP-2024-002": {
+    "status": "CLOSED",
+    "qc": null,
+    "report": null
+  },
+  "CMP-2024-003": {
+    "status": "closed",
+    "qc": null,
+    "report": null
+  },
+  "CMP-B70B204D": {
+    "status": "CLOSED",
+    "qc": null,
+    "report": null
+  }
+}

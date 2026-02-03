@@ -232,7 +232,8 @@ export const submitWarehouseAssessment = async (req, res) => {
   } catch (err) {
     console.error("SUBMIT ASSESSMENT ERROR:", err);
     res.status(500).json({
-      message: "Assessment submit failed"
+      message: "Assessment submit failed",
+      error: err.message
     });
   }
 };
@@ -267,7 +268,8 @@ export const viewWarehouseAssessment = async (req, res) => {
   } catch (err) {
     console.error("VIEW ASSESSMENT ERROR:", err);
     res.status(500).json({
-      message: "Failed to load warehouse assessment"
+      message: "Failed to load warehouse assessment",
+      error: err.message
     });
   }
 };
@@ -329,6 +331,6 @@ export const dispatchSample = async (req, res) => {
     res.json({ message: "Sample dispatched from warehouse" });
   } catch (err) {
     console.error("DISPATCH ERROR:", err);
-    res.status(500).json({ message: "Failed to dispatch sample" });
+    res.status(500).json({ message: "Failed to dispatch sample", error: err.message });
   }
 };
