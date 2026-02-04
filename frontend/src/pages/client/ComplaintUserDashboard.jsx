@@ -16,6 +16,77 @@ export default function ComplaintUserDashboard() {
   const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [dateFilter, setDateFilter] = useState("ALL");
+
+  /* ---------------- DATE HELPERS ---------------- */
+
+  const handleDateFilterChange = (value) => {
+    setDateFilter(value);
+
+    if (value === "ALL" || value === "CUSTOM") {
+      // Don't clear dates for custom so user can edit them
+      // For ALL, we might want to clear, but backend handles empty strings as "all time"
+      if (value === "ALL") {
+        setFromDate("");
+        setToDate("");
+      }
+      return;
+    }
+
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    // Reset hours to avoid timezone weirdness
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0); // Ends usually mean "end of day" but for date inputs usually just YYYY-MM-DD is fine
+
+    switch (value) {
+      case "TODAY":
+        // start = today
+        // end = today
+        break;
+      case "YESTERDAY":
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        break;
+      case "LAST_7_DAYS":
+        start.setDate(today.getDate() - 7);
+        break;
+      case "LAST_30_DAYS":
+        start.setDate(today.getDate() - 30);
+        break;
+      case "THIS_MONTH":
+        start.setDate(1); // 1st of current month
+        break;
+      case "LAST_MONTH":
+        start.setMonth(today.getMonth() - 1);
+        start.setDate(1);
+        end.setDate(0); // Last day of previous month
+        break;
+      default:
+        break;
+    }
+
+    // Helper to format YYYY-MM-DD
+    const format = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    setFromDate(format(start));
+    if (value === "LAST_MONTH") {
+      setToDate(format(end));
+    } else {
+      // For ranges "up to today", we usually set toDate to today
+      // but verify business logic. usually "Last 7 days" includes today? 
+      // Logic above sets start to 7 days ago.
+      setToDate(format(today));
+    }
+  };
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
@@ -55,6 +126,7 @@ export default function ComplaintUserDashboard() {
     setStatus("");
     setFromDate("");
     setToDate("");
+    setDateFilter("ALL");
     setShowDropdown(false);
     setFilteredIds([]);
 
@@ -178,26 +250,49 @@ export default function ComplaintUserDashboard() {
               </select>
             </div>
 
-            {/* Dates */}
+            {/* Date Range Dropdown */}
             <div>
-              <label className="text-sm font-medium">From Date</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
+              <label className="text-sm font-medium">Date Range</label>
+              <select
+                value={dateFilter}
+                onChange={(e) => handleDateFilterChange(e.target.value)}
                 className="border px-3 py-2 w-full rounded-lg bg-white"
-              />
+              >
+                <option value="ALL">All Time</option>
+                <option value="TODAY">Today</option>
+                <option value="YESTERDAY">Yesterday</option>
+                <option value="LAST_7_DAYS">Last 7 Days</option>
+                <option value="LAST_30_DAYS">Last 30 Days</option>
+                <option value="THIS_MONTH">This Month</option>
+                <option value="LAST_MONTH">Last Month</option>
+                <option value="CUSTOM">Custom Range</option>
+              </select>
             </div>
 
-            <div>
-              <label className="text-sm font-medium">To Date</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded-lg bg-white"
-              />
-            </div>
+            {/* Custom Date Inputs */}
+            {dateFilter === "CUSTOM" && (
+              <>
+                <div>
+                  <label className="text-sm font-medium">From Date</label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="border px-3 py-2 w-full rounded-lg bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">To Date</label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="border px-3 py-2 w-full rounded-lg bg-white"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -247,9 +342,8 @@ export default function ComplaintUserDashboard() {
               {complaints.map((c, i) => (
                 <tr
                   key={c.complaint_code}
-                  className={`border-t hover:bg-orange-50 transition ${
-                    i % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  }`}
+                  className={`border-t hover:bg-orange-50 transition ${i % 2 === 0 ? "bg-gray-50" : "bg-white"
+                    }`}
                 >
                   <td className="p-3 font-medium">{c.complaint_code}</td>
                   <td className="p-3">{c.complaint_type}</td>
@@ -300,10 +394,10 @@ export default function ComplaintUserDashboard() {
                       "RESOLVED",
                       "REJECTED_WH",
                     ].includes(c.status) && (
-                      <span className="text-green-700 text-xs font-semibold">
-                        Sample Dispatched
-                      </span>
-                    )}
+                        <span className="text-green-700 text-xs font-semibold">
+                          Sample Dispatched
+                        </span>
+                      )}
                   </td>
                 </tr>
               ))}
