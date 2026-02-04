@@ -53,14 +53,7 @@ export default function ComplaintTopSection({ complaint }) {
       <div className="bg-gray-50 border rounded p-6 mb-6">
 
         {/* 🔙 BACK BUTTON */}
-        <div className="mb-4">
-          <button
-            onClick={() => navigate("/warehouse")}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
+
 
         {/* ===== BASIC DETAILS ===== */}
         <div className="grid grid-cols-2 gap-4 text-sm mb-6">
@@ -71,7 +64,19 @@ export default function ComplaintTopSection({ complaint }) {
           <div><b>Item Name:</b> {complaint.item_name}</div>
           <div><b>Item Code:</b> {complaint.item_code}</div>
           <div><b>Batch No:</b> {complaint.batch_no}</div>
+          <div>
+            <b>Warehouse Code:</b>{" "}
+            {complaint.warehouse_code || "—"}
+          </div>
           <div><b>Status:</b> {complaint.status}</div>
+
+          {/* ✅ ADDED: CREATED DATE */}
+          {complaint.created_at && (
+            <div>
+              <b>Complaint Created On:</b>{" "}
+              {new Date(complaint.created_at).toLocaleString()}
+            </div>
+          )}
         </div>
 
         {/* ===== DOCUMENTS (SAME LOGIC AS COMPLAINT VIEW) ===== */}

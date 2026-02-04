@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../services/api.js";
+
 import GovHeader from "../../components/GovHeader";
 import { FaPlusCircle, FaHospital } from "react-icons/fa";
 
@@ -22,8 +23,10 @@ export default function ComplaintUserDashboard() {
   /* ---------------- LOAD DASHBOARD ---------------- */
 
   const loadDashboard = () => {
-    axios
-      .get("http://localhost:5000/api/grievance/complaint-user/dashboard", {
+    const token = localStorage.getItem("token");
+
+    api
+      .get("/grievance/complaint-user/dashboard", {
         params: {
           complaintCode,
           status,
@@ -46,6 +49,8 @@ export default function ComplaintUserDashboard() {
   /* ---------------- CLEAR FILTERS ---------------- */
 
   const clearFilters = () => {
+    const token = localStorage.getItem("token");
+
     setComplaintCode("");
     setStatus("");
     setFromDate("");
@@ -53,10 +58,13 @@ export default function ComplaintUserDashboard() {
     setShowDropdown(false);
     setFilteredIds([]);
 
-    axios
-      .get("http://localhost:5000/api/grievance/complaint-user/dashboard")
+    api
+      .get("/grievance/complaint-user/dashboard")
       .then((res) => {
         setComplaints(res.data.complaints || []);
+      })
+      .catch(() => {
+        alert("Failed to load dashboard");
       });
   };
 
@@ -81,49 +89,28 @@ export default function ComplaintUserDashboard() {
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-gray-50 to-orange-50">
       <GovHeader />
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
 
-        {/* ✅ WELCOME + RAISE SECTION */}
-        
-         <div className="
-  bg-green-50
-  border
-  border-green-200
-  rounded
-  px-6
-  py-4
-  mb-6
-  flex
-  items-center
-  justify-between
-
-
-        ">
-          {/* LEFT SIDE */}
+        {/* WELCOME + RAISE */}
+        <div className="flex items-center justify-between bg-white shadow-lg border-l-8 border-green-700 rounded-lg px-6 py-4">
           <div className="flex items-center gap-3">
-            <FaHospital className="text-green-800 text-2xl" />
-            <h2 className="text-lg font-semibold text-gray-800">
-              Welcome to Facility Dashboard
-            </h2>
+            <FaHospital className="text-green-800 text-3xl" />
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">
+                Facility Dashboard
+              </h2>
+              <p className="text-sm text-gray-500">
+                Track & manage your complaints
+              </p>
+            </div>
           </div>
 
-          {/* RIGHT SIDE */}
           <button
             onClick={() => navigate("/complaint/select-type")}
-            className="
-              bg-blue-800
-              text-white
-              px-8
-              py-3
-              rounded
-              flex
-              items-center
-              gap-2
-              hover:bg-orange-600
-            "
+            className="bg-gradient-to-r from-blue-700 to-blue-900 text-white px-8 py-3 rounded-lg flex items-center gap-2 shadow hover:scale-105 transition"
           >
             <FaPlusCircle />
             Raise New Complaint
@@ -131,7 +118,11 @@ export default function ComplaintUserDashboard() {
         </div>
 
         {/* FILTER CARD */}
-        <div className="bg-green-50 border border-green-200 rounded p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+          <h3 className="font-semibold text-gray-700 border-b pb-2">
+            Filters
+          </h3>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
             {/* Complaint ID */}
@@ -144,12 +135,12 @@ export default function ComplaintUserDashboard() {
                   setShowDropdown(true);
                   setFilteredIds(complaints);
                 }}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg focus:ring-2 focus:ring-green-600"
                 placeholder="Enter Complaint ID"
               />
 
               {showDropdown && filteredIds.length > 0 && (
-                <div className="absolute bg-white border w-full mt-1 rounded shadow z-10 max-h-40 overflow-y-auto">
+                <div className="absolute bg-white border w-full mt-1 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
                   {filteredIds.map((c) => (
                     <div
                       key={c.complaint_code}
@@ -157,7 +148,7 @@ export default function ComplaintUserDashboard() {
                         setComplaintCode(c.complaint_code);
                         setShowDropdown(false);
                       }}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                      className="px-3 py-2 cursor-pointer hover:bg-green-50 text-sm"
                     >
                       {c.complaint_code}
                     </div>
@@ -166,13 +157,13 @@ export default function ComplaintUserDashboard() {
               )}
             </div>
 
-            {/* STATUS */}
+            {/* Status */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg bg-white"
               >
                 <option value="">All</option>
                 <option value="SUBMITTED">Submitted</option>
@@ -187,13 +178,14 @@ export default function ComplaintUserDashboard() {
               </select>
             </div>
 
+            {/* Dates */}
             <div>
               <label className="text-sm font-medium">From Date</label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg bg-white"
               />
             </div>
 
@@ -203,32 +195,31 @@ export default function ComplaintUserDashboard() {
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="border px-3 py-2 w-full rounded bg-white"
+                className="border px-3 py-2 w-full rounded-lg bg-white"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={clearFilters}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg"
             >
               Clear Filters
             </button>
-
             <button
               onClick={loadDashboard}
-              className="bg-orange-500 text-white px-6 py-2 rounded"
+              className="bg-orange-500 text-white px-6 py-2 rounded-lg shadow hover:bg-orange-600"
             >
               Apply
             </button>
           </div>
         </div>
 
-        {/* TABLE (UNCHANGED) */}
-        <div className="bg-white border rounded overflow-x-auto">
+        {/* TABLE */}
+        <div className="bg-white rounded-xl shadow-lg overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-orange-500 text-white">
+            <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
               <tr>
                 <th className="p-3">Complaint ID</th>
                 <th className="p-3">Type</th>
@@ -253,16 +244,25 @@ export default function ComplaintUserDashboard() {
                 </tr>
               )}
 
-              {complaints.map((c) => (
-                <tr key={c.complaint_code} className="border-t">
-                  <td className="p-3">{c.complaint_code}</td>
+              {complaints.map((c, i) => (
+                <tr
+                  key={c.complaint_code}
+                  className={`border-t hover:bg-orange-50 transition ${
+                    i % 2 === 0 ? "bg-gray-50" : "bg-white"
+                  }`}
+                >
+                  <td className="p-3 font-medium">{c.complaint_code}</td>
                   <td className="p-3">{c.complaint_type}</td>
                   <td className="p-3">{c.category}</td>
                   <td className="p-3">{c.facility_name}</td>
                   <td className="p-3">{c.item_name}</td>
                   <td className="p-3">{c.batch_no}</td>
                   <td className="p-3">{c.affected_quantity}</td>
-                  <td className="p-3">{c.status}</td>
+                  <td className="p-3">
+                    <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                      {c.status}
+                    </span>
+                  </td>
                   <td className="p-3">
                     {new Date(c.created_at).toLocaleDateString()}
                   </td>
@@ -284,22 +284,23 @@ export default function ComplaintUserDashboard() {
                         onClick={() =>
                           navigate(`/complaint/dispatch/${c.complaint_code}`)
                         }
-                        className="bg-orange-500 text-white px-3 py-1 rounded text-xs"
+                        className="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600"
                       >
                         Dispatch Sample
                       </button>
                     )}
 
                     {[
-  "SAMPLE_DISPATCHED_FACILITY",
-  "SAMPLE_RECEIVED_WH",
-  "IN_PROGRESS_WH",
-  "SAMPLE_DISPATCHED_WH",
-  "SAMPLE_RECEIVED_QC",
-  "IN_PROGRESS_QC",
-  "RESOLVED","REJECTED_WH"
-].includes(c.status)&& (
-                      <span className="text-green-700 text-xs font-medium">
+                      "SAMPLE_DISPATCHED_FACILITY",
+                      "SAMPLE_RECEIVED_WH",
+                      "IN_PROGRESS_WH",
+                      "SAMPLE_DISPATCHED_WH",
+                      "SAMPLE_RECEIVED_QC",
+                      "IN_PROGRESS_QC",
+                      "RESOLVED",
+                      "REJECTED_WH",
+                    ].includes(c.status) && (
+                      <span className="text-green-700 text-xs font-semibold">
                         Sample Dispatched
                       </span>
                     )}

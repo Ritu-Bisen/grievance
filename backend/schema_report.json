@@ -1,0 +1,13 @@
+{
+  "qc_assessment": "MISSING",
+  "qc_assessments": [
+    "id",
+    "created_at",
+    "complaint_code",
+    "report_received_date",
+    "complaint_close_date",
+    "remarks",
+    "status",
+    "send_report_admin"
+  ]
+}

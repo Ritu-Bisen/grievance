@@ -1,0 +1,20 @@
+
+COLUMNS_OF_qc_assessments:
+id | char(36)
+created_at | timestamp
+complaint_code | varchar(255)
+report_received_date | timestamp
+complaint_close_date | timestamp
+remarks | text
+status | varchar(50)
+send_report_admin | tinyint(1)
+
+COLUMNS_OF_complaint_reports:
+id | int
+report_pdf | varchar(500)
+report_description | text
+received_at | timestamp
+created_at | timestamp
+complaint_code | varchar(100)
+
+ERROR_qc_assessment: Table 'complaint_module.qc_assessment' doesn't exist

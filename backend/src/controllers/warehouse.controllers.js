@@ -50,10 +50,18 @@ export const receiveSampleWarehouse = async (req, res) => {
 
     await pool.execute(
       `UPDATE complaints
-       SET status = 'SAMPLE_RECEIVED_WH'
+       SET status = 'SAMPLE_RECEIVED_WH',
+           sample_received_date = NOW()
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+    // 🔥 STATUS LOG
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SAMPLE_RECEIVED_WH')`,
+      [complaint_code]
+    );
+
 
     res.json({ status: "SAMPLE_RECEIVED_WH" });
   } catch (err) {
@@ -84,6 +92,12 @@ export const approveWarehouse = async (req, res) => {
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+    // 🔥 STATUS LOG
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'IN_PROGRESS_WH')`,
+      [complaint_code]
+    );
 
     res.json({ status: "IN_PROGRESS_WH" });
   } catch (err) {
@@ -110,12 +124,22 @@ export const rejectWarehouse = async (req, res) => {
 
     await pool.execute(
       `UPDATE complaints
-       SET status = 'REJECTED_WH'
+       SET status = 'REJECTED_WH',
+           rejected_at = NOW(),
+           resolution_remark = 'Complaint rejected at warehouse as it was found invalid during initial verification.'
        WHERE complaint_code = ?`,
       [complaint_code]
     );
+    // 🔥 STATUS LOG
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'REJECTED_WH')`,
+      [complaint_code]
+    );
+
 
     res.json({ status: "REJECTED_WH" });
+
   } catch (err) {
     console.error("REJECT ERROR:", err);
     res.status(500).json({
@@ -123,6 +147,7 @@ export const rejectWarehouse = async (req, res) => {
     });
   }
 };
+
 
 /* ============================================================= */
 /*                SUBMIT WAREHOUSE ASSESSMENT                    */
@@ -228,7 +253,8 @@ export const submitWarehouseAssessment = async (req, res) => {
   } catch (err) {
     console.error("SUBMIT ASSESSMENT ERROR:", err);
     res.status(500).json({
-      message: "Assessment submit failed"
+      message: "Assessment submit failed",
+      error: err.message
     });
   }
 };
@@ -251,6 +277,12 @@ export const viewWarehouseAssessment = async (req, res) => {
       [complaintCode]
     );
 
+    // 🔥 Fetch QC assessment for lifecycle
+    const [[qcAssessment]] = await pool.execute(
+      "SELECT * FROM qc_assessments WHERE complaint_code=?",
+      [complaintCode]
+    );
+
     res.json({
       complaint: complaint
         ? { ...complaint, documents: safeJson(complaint.documents) }
@@ -258,12 +290,15 @@ export const viewWarehouseAssessment = async (req, res) => {
 
       assessment: assessment
         ? { ...assessment, documents: safeJson(assessment.documents) }
-        : null
+        : null,
+
+      qcAssessment: qcAssessment || null
     });
   } catch (err) {
     console.error("VIEW ASSESSMENT ERROR:", err);
     res.status(500).json({
-      message: "Failed to load warehouse assessment"
+      message: "Failed to load warehouse assessment",
+      error: err.message
     });
   }
 };
@@ -271,29 +306,43 @@ export const viewWarehouseAssessment = async (req, res) => {
 /* ============================================================= */
 /*                    RESOLVE COMPLAINT                          */
 /* ============================================================= */
-
 export const resolveComplaint = async (req, res) => {
   const { complaint_code, resolution_remark } = req.body;
 
   if (!complaint_code) {
-    return res.status(400).json({ message: "complaint_code required" });
+    return res.status(400).json({
+      message: "complaint_code required"
+    });
   }
 
   try {
     await pool.execute(
       `UPDATE complaints
        SET status = 'RESOLVED',
-           resolution_remark = ?
+           resolution_remark = ?,
+           resolved_at = NOW()
        WHERE complaint_code = ?`,
       [resolution_remark || null, complaint_code]
     );
+    // 🔥 STATUS LOG (FINAL END)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'RESOLVED')`,
+      [complaint_code]
+    );
 
-    res.json({ message: "Complaint resolved successfully" });
+
+    res.json({
+      message: "Complaint resolved successfully"
+    });
   } catch (err) {
     console.error("RESOLVE ERROR:", err);
-    res.status(500).json({ message: "Failed to resolve complaint" });
+    res.status(500).json({
+      message: "Failed to resolve complaint"
+    });
   }
 };
+
 
 /* ============================================================= */
 /*                    DISPATCH SAMPLE                            */
@@ -314,10 +363,24 @@ export const dispatchSample = async (req, res) => {
        WHERE complaint_code = ?`,
       [remarks || null, complaint_code]
     );
+    // 🔥 STATUS LOG (WAREHOUSE END / QC START)
+    await pool.execute(
+      `INSERT INTO complaint_status_logs (complaint_code, status)
+   VALUES (?, 'SAMPLE_DISPATCHED_WH')`,
+      [complaint_code]
+    );
+
+    // 🔥 UPDATE sample_dispatch_date in warehouse_assessments
+    await pool.execute(
+      `UPDATE warehouse_assessments
+       SET sample_dispatch_date = NOW()
+       WHERE complaint_code = ?`,
+      [complaint_code]
+    );
 
     res.json({ message: "Sample dispatched from warehouse" });
   } catch (err) {
     console.error("DISPATCH ERROR:", err);
-    res.status(500).json({ message: "Failed to dispatch sample" });
+    res.status(500).json({ message: "Failed to dispatch sample", error: err.message });
   }
 };
