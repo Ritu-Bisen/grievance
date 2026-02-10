@@ -15,8 +15,8 @@ export default function WarehouseSampleReceived() {
 
   const loadComplaint = async () => {
     const res = await api.get(
-  `/grievance/complaint-user/view/${code}`
-);
+      `/grievance/complaint-user/view/${code}`
+    );
 
     setComplaint(res.data);
   };
@@ -31,9 +31,9 @@ export default function WarehouseSampleReceived() {
     setLoading(true);
 
     await api.post("/grievance/warehouse/receive-sample", {
-  complaint_code: code,
-        status: "SAMPLE_RECEIVED_WH"
-      }
+      complaint_code: code,
+      status: "SAMPLE_RECEIVED_WH"
+    }
     );
 
     setLoading(false);
@@ -100,7 +100,7 @@ export default function WarehouseSampleReceived() {
         </h2>
 
         {/* Back button */}
-        
+
 
         {/* -------- SAMPLE RECEIPT TIMELINE -------- */}
         <div className="border rounded-lg p-4 mb-6 bg-white">
@@ -160,16 +160,16 @@ export default function WarehouseSampleReceived() {
 
               <div className="flex justify-between">
                 <button
-                  onClick={() => navigate("/warehouse")}
+                  onClick={() => navigate(`/warehouse/assessment/view/${code}`)}
                   className="px-4 py-2 bg-gray-400 text-white rounded"
                 >
-                  Back to Dashboard
+                  Proceed to View Details
                 </button>
 
                 <button
-                  
-                 onClick={() => navigate(`/warehouse/approve-reject/${code}`)}
-                className="px-4 py-2 bg-green-600 text-white rounded"
+
+                  onClick={() => navigate(`/warehouse/approve-reject/${code}`)}
+                  className="px-4 py-2 bg-green-600 text-white rounded"
                 >
 
                   Next Stage

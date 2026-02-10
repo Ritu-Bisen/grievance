@@ -27,8 +27,8 @@ export default function ADRAssessmentPage() {
   /* ================= LOAD COMPLAINT ================= */
   useEffect(() => {
     api
-  .get(`/grievance/complaint-user/view/${code}`)
-  .then((res) => setComplaint(res.data))
+      .get(`/grievance/complaint-user/view/${code}`)
+      .then((res) => setComplaint(res.data))
 
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
@@ -80,7 +80,7 @@ export default function ADRAssessmentPage() {
       });
 
       await api.post(
-  "/grievance/warehouse/assessment/submit",
+        "/grievance/warehouse/assessment/submit",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -88,9 +88,9 @@ export default function ADRAssessmentPage() {
       alert("ADR assessment submitted successfully");
 
       /* 🔥 FIRST TIME POPUP FLAG */
-    
-      /* 🔥 POPUP PAGE */
-      navigate(`/warehouse/assessment/submitted/${code}`);
+
+      /* 🔥 REDIRECT DIRECTLY TO VIEW PAGE */
+      navigate(`/warehouse/assessment/view/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Submit failed");

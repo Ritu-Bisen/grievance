@@ -1,4 +1,5 @@
 import express from "express";
+import { assessmentUpload } from "../middlewares/assessmentUpload.js";
 import { authenticate } from "../middlewares/Auth.js";
 import {
     getQcDashboard,
@@ -26,6 +27,6 @@ router.post("/qc/receive-report", authenticate, postQcReportReceived);
 router.get("/qc/download-pdf", authenticate, downloadReportPdf);
 router.post("/qc/review", authenticate, postQcReview);
 router.get("/qc/full-details/:code", authenticate, getFullAssessmentDetails);
-router.post("/qc/resolve", authenticate, postQcResolve);
+router.post("/qc/resolve", authenticate, assessmentUpload.single("document"), postQcResolve);
 
 export default router;

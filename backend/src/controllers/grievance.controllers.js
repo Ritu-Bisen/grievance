@@ -11,41 +11,111 @@ import {
 
 export const createComplaint = async (req, res) => {
   try {
-    // 🔐 facility MUST come from token, NOT frontend
-    if (req.user.role !== "FACILITY") {
+    // 🔐 Allow FACILITY or WAREHOUSE
+    if (req.user.role !== "FACILITY" && req.user.role !== "WAREHOUSE") {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const facility = {
-      name: req.user.facility_name,
-      address: req.user.facility_address
-    };
+    let facility = {};
+
+    if (req.user.role === "FACILITY") {
+      facility = {
+        name: req.user.facility_name,
+        address: req.user.facility_address
+      };
+    } else {
+      // WAREHOUSE
+      facility = {
+        name: `WAREHOUSE: ${req.user.warehouse_code}`,
+        address: "Warehouse Initiated"
+      };
+    }
 
     const item = JSON.parse(req.body.item);
     const batch = JSON.parse(req.body.batch);
 
     const documents =
-      req.files?.map(file => ({
+      req.files?.documents?.map(file => ({
         file_name: file.filename,
         original_name: file.originalname
       })) || [];
+
+    const opdSlipFile = req.files?.opd_slip?.[0]?.filename || null;
+
 
     const complaintCode = await createComplaintService(
       {
         ...req.body,
         facility,
         item,
-        batch
+        batch,
+        opd_slip: opdSlipFile
       },
       documents
     );
-    // 🔥 STATUS LOG (FACILITY START)
-    await pool.execute(
-      `INSERT INTO complaint_status_logs (complaint_code, status)
-   VALUES (?, 'SUBMITTED')`,
-      [complaintCode]
-    );
 
+    // 🔥 WAREHOUSE ASSESSMENT (IF APPLICABLE)
+    if (req.user.role === "WAREHOUSE" && req.body.tender_no) {
+      await pool.execute(
+        `INSERT INTO warehouse_assessments
+        (
+          complaint_code,
+          assessment_type,
+          item_code,
+          batch_no,
+          tender_no,
+          po_no,
+          stock_warehouse,
+          stock_facility,
+          total_stock,
+          same_complaint_present,
+          remarks,
+          quality_description,
+          documents,
+          sample_dispatch_date
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, NULL)`,
+        [
+          complaintCode,
+          req.body.complaint_type,
+          item.code,
+          batch.batchNo,
+          req.body.tender_no || null,
+          req.body.po_no || null,
+          req.body.stock_warehouse || null,
+          req.body.stock_facility || null,
+          req.body.total_stock || null,
+          req.body.same_complaint_present || null,
+          "Assessment submitted during creation",
+          req.body.quality_description || null,
+          "[]" // No separate docs for assessment in this flow, using complaint docs
+        ]
+      );
+
+      // 🔥 STATUS LOG (Set to SUBMITTED_WH)
+      await pool.execute(
+        `UPDATE complaints SET status = 'SUBMITTED_WH' WHERE complaint_code = ?`,
+        [complaintCode]
+      );
+
+      // Add log for SUBMITTED_WH
+      await pool.execute(
+        `INSERT INTO complaint_status_logs (complaint_code, status) VALUES (?, 'SUBMITTED_WH')`,
+        [complaintCode]
+      );
+
+      // Add log for IN_PROGRESS_WH
+      await pool.execute(
+        `INSERT INTO complaint_status_logs (complaint_code, status) VALUES (?, 'IN_PROGRESS_WH')`,
+        [complaintCode]
+      );
+    } else {
+      // 🔥 STATUS LOG (FACILITY START)
+      await pool.execute(
+        `INSERT INTO complaint_status_logs (complaint_code, status)
+       VALUES (?, 'SUBMITTED')`,
+        [complaintCode]
+      );
+    }
 
     res.status(201).json({
       message: "Complaint submitted successfully",

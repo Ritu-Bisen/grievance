@@ -1,6 +1,19 @@
 import pool from "../config/db.js";
 
 /* ============================================================= */
+/* 🔐 SAFE JSON PARSER                                            */
+/* ============================================================= */
+const safeJson = (value) => {
+    try {
+        if (!value || value === "" || value === " ") return [];
+        if (typeof value === "object") return value;
+        return JSON.parse(value);
+    } catch (err) {
+        return [];
+    }
+};
+
+/* ============================================================= */
 /*                    QC DASHBOARD                               */
 /* ============================================================= */
 
@@ -101,6 +114,17 @@ export const getQcAssessmentView = async (req, res) => {
 
         const complaint = complaintRows[0];
 
+        // Parse JSON documents if exists
+        if (complaint.documents) {
+            try {
+                complaint.documents = typeof complaint.documents === "string"
+                    ? JSON.parse(complaint.documents)
+                    : complaint.documents;
+            } catch (e) {
+                complaint.documents = [];
+            }
+        }
+
         // Get warehouse assessment details
         const [assessmentRows] = await pool.execute(
             `SELECT * FROM warehouse_assessments WHERE complaint_code = ?`,
@@ -124,12 +148,8 @@ export const getQcAssessmentView = async (req, res) => {
         const report = reportRows.length > 0 ? reportRows[0] : null;
 
         // Parse JSON documents if exists
-        if (assessment && assessment.documents) {
-            try {
-                assessment.documents = JSON.parse(assessment.documents);
-            } catch (e) {
-                assessment.documents = [];
-            }
+        if (assessment) {
+            assessment.documents = safeJson(assessment.documents);
         }
 
         res.json({ complaint, assessment, qc, report });
@@ -198,6 +218,17 @@ export const getQcReportView = async (req, res) => {
         }
 
         const complaint = complaintRows[0];
+        complaint.documents = safeJson(complaint.documents);
+
+        // Get warehouse assessment details
+        const [whRows] = await pool.execute(
+            `SELECT * FROM warehouse_assessments WHERE complaint_code = ?`,
+            [code]
+        );
+        const assessment = whRows.length > 0 ? whRows[0] : null;
+        if (assessment) {
+            assessment.documents = safeJson(assessment.documents);
+        }
 
         // Get report from complaint_reports table (complaint_code mapping)
         const [reportRows] = await pool.execute(
@@ -207,7 +238,7 @@ export const getQcReportView = async (req, res) => {
 
         const report = reportRows.length > 0 ? reportRows[0] : null;
 
-        res.json({ complaint, report });
+        res.json({ complaint, assessment, report });
     } catch (err) {
         console.error("QC REPORT VIEW ERROR:", err);
         res.status(500).json({
@@ -376,12 +407,28 @@ export const getFullAssessmentDetails = async (req, res) => {
         if (complaintRows.length === 0) return res.status(404).json({ message: "Complaint not found" });
         const complaint = complaintRows[0];
 
+        // Parse JSON documents if exists
+        if (complaint.documents) {
+            try {
+                complaint.documents = typeof complaint.documents === "string"
+                    ? JSON.parse(complaint.documents)
+                    : complaint.documents;
+            } catch (e) {
+                complaint.documents = [];
+            }
+        }
+
+
         // Get warehouse assessment details
         const [whRows] = await pool.execute(
             `SELECT * FROM warehouse_assessments WHERE complaint_code = ?`,
             [code]
         );
         const warehouse = whRows.length > 0 ? whRows[0] : null;
+
+        if (warehouse) {
+            warehouse.documents = safeJson(warehouse.documents);
+        }
 
         // Get qc assessment details
         const [qcRows] = await pool.execute(
@@ -411,19 +458,21 @@ export const getFullAssessmentDetails = async (req, res) => {
 export const postQcResolve = async (req, res) => {
     try {
         const { complaint_code, remarks } = req.body;
+        const document = req.file ? req.file.filename : null;
 
         if (!complaint_code) {
             return res.status(400).json({ message: "Complaint code is required" });
         }
 
-        // Update qc_assessments: set status to Approve, add remarks and close date
+        // Update qc_assessments: set status to Approve, add remarks, document and close date
         await pool.execute(
             `UPDATE qc_assessments 
              SET remarks = ?, 
+                 document = ?,
                  status = 'Approve',
                  complaint_close_date = CURRENT_TIMESTAMP 
              WHERE complaint_code = ?`,
-            [remarks || null, complaint_code]
+            [remarks || null, document, complaint_code]
         );
 
         // Update complaints: set status to RESOLVED and update close date

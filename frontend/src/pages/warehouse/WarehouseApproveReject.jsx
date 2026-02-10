@@ -14,8 +14,8 @@ export default function WarehouseApproveReject() {
   /* ---------------- LOAD COMPLAINT ---------------- */
   useEffect(() => {
     api
-  .get(`/grievance/complaint-user/view/${code}`)
-  .then((res) => setComplaint(res.data))
+      .get(`/grievance/complaint-user/view/${code}`)
+      .then((res) => setComplaint(res.data))
 
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
@@ -23,7 +23,7 @@ export default function WarehouseApproveReject() {
   /* ---------------- APPROVE ---------------- */
   const handleApprove = async () => {
     await api.post(
-  "/grievance/warehouse/approve",
+      "/grievance/warehouse/approve",
       { complaint_code: code }
     );
 
@@ -38,7 +38,7 @@ export default function WarehouseApproveReject() {
   /* ---------------- REJECT ---------------- */
   const handleReject = async () => {
     await api.post(
-  "/grievance/warehouse/reject",
+      "/grievance/warehouse/reject",
       { complaint_code: code }
     );
 
@@ -65,10 +65,10 @@ export default function WarehouseApproveReject() {
           </h2>
 
           <button
-            onClick={() => navigate("/warehouse")}
+            onClick={() => navigate(`/warehouse/assessment/view/${code}`)}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
           >
-            Back to Dashboard
+            ← Back to View Details
           </button>
         </div>
 
@@ -86,8 +86,8 @@ export default function WarehouseApproveReject() {
                 complaint.status === "REJECTED_WH"
                   ? "text-red-600 font-semibold"
                   : complaint.status === "IN_PROGRESS_WH"
-                  ? "text-green-700 font-semibold"
-                  : ""
+                    ? "text-green-700 font-semibold"
+                    : ""
               }
             >
               {complaint.status}

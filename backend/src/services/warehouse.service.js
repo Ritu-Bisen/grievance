@@ -30,7 +30,8 @@ export const warehouseDashboardService = async (query, user) => {
       batch_no,
       warehouse_code,
       status,
-      created_at
+      created_at,
+      resolved_at
     FROM complaints
     WHERE warehouse_code = ?
   `;

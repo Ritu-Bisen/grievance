@@ -228,7 +228,7 @@ function App() {
           <Route
             path="/complaint/select-type"
             element={
-              <ProtectedRoute allowedRoles={["FACILITY"]}>
+              <ProtectedRoute allowedRoles={["FACILITY", "WAREHOUSE"]}>
                 <ComplaintTypeSelection />
               </ProtectedRoute>
             }

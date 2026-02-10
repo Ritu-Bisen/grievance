@@ -39,8 +39,34 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
 
     const isRejected = complaint.status === "REJECTED_WH";
 
+    // 🆕 Warehouse Complaint Detection
+    const isWarehouseComplaint = complaint.facility_name?.startsWith("WAREHOUSE:");
+
     // Choose which steps to show
-    const visibleSteps = isRejected ? REJECTED_STEPS : STEPS;
+    let visibleSteps = isRejected ? REJECTED_STEPS : STEPS;
+
+    if (isWarehouseComplaint) {
+        if (complaint.complaint_type === "PHYSICAL") {
+            // Warehouse + Physical => Only Submitted -> Resolved
+            visibleSteps = visibleSteps.filter(step =>
+                ["submitted", "resolved"].includes(step.key)
+            );
+        } else {
+            // Warehouse + Other => Skip logistics, show Dispatch(WH) -> QC
+            visibleSteps = visibleSteps.filter(step =>
+                !["dispatch_facility", "received_warehouse", "in_progress_warehouse"].includes(step.key)
+            );
+        }
+    } else {
+        // Facility Complaint
+        if (complaint.complaint_type === "PHYSICAL") {
+            // Physical => Skip QC steps (5, 6, 7)
+            // Steps: Submitted(1) -> Dispatched(2) -> Received(3) -> WH Review(4) -> Resolved(8)
+            visibleSteps = visibleSteps.filter(step =>
+                !["dispatch_qc", "received_qc", "report_received"].includes(step.key)
+            );
+        }
+    }
 
     // Calculate which steps are completed
     const getStepStatus = (stepKey) => {
@@ -72,7 +98,7 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
                 return "pending";
 
             case "dispatch_qc":
-                if (warehouseAssessment?.sample_dispatch_date) return "completed";
+                if (warehouseAssessment?.sample_dispatch_date || ["SAMPLE_DISPATCHED_WH", "SAMPLE_RECEIVED_QC", "REPORT_RECEIVED", "RESOLVED"].includes(status)) return "completed";
                 return "pending";
 
             case "received_qc":
@@ -113,8 +139,11 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
             case "received_warehouse":
                 return formatDate(complaint.sample_received_date);
             case "in_progress_warehouse":
-                // For WH Review, show complaint status text as requested
-                return complaint.status;
+                // Only show status text if it is APPROVE or REJECT
+                if (["APPROVED", "REJECTED_WH"].includes(complaint.status)) {
+                    return complaint.status;
+                }
+                return null;
 
             case "rejected_warehouse":
                 // For rejection step, show rejection date
@@ -150,12 +179,21 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
             {/* Horizontal Timeline */}
             <div className="relative pb-8">
                 {/* Progress Bar Background */}
-                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded"></div>
+                <div
+                    className="absolute top-4 h-1 bg-gray-200 rounded"
+                    style={{
+                        left: `${100 / (visibleSteps.length * 2)}%`,
+                        right: `${100 / (visibleSteps.length * 2)}%`
+                    }}
+                ></div>
 
                 {/* Progress Bar Fill */}
                 <div
-                    className={`absolute top-4 left-0 h-1 rounded transition-all duration-500 ${isRejected ? 'bg-red-500' : 'bg-green-500'}`}
-                    style={{ width: `${progressPercent}%` }}
+                    className={`absolute top-4 h-1 rounded transition-all duration-500 ${isRejected ? 'bg-red-500' : (complaint.status === "RESOLVED" ? 'bg-green-500' : 'bg-blue-500')}`}
+                    style={{
+                        left: `${100 / (visibleSteps.length * 2)}%`,
+                        width: `${Math.max(0, ((completedCount - 1) / (visibleSteps.length - 1)) * (100 - (100 / visibleSteps.length)))}%`
+                    }}
                 ></div>
 
                 {/* Steps */}
@@ -168,11 +206,13 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
                             <div key={step.id} className="flex flex-col items-center" style={{ width: `${100 / visibleSteps.length}%` }}>
                                 {/* Step Circle */}
                                 <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 border-2
-                  ${stepStatus === "completed" ? "bg-green-500 border-green-500 text-white" : ""}
-                  ${stepStatus === "rejected" ? "bg-red-500 border-red-500 text-white" : ""}
-                  ${stepStatus === "pending" ? "bg-white border-gray-300 text-gray-400" : ""}
-                `}>
+                                  w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 border-2 transition-colors duration-300
+                                  ${stepStatus === "completed"
+                                        ? (step.key === "resolved" ? "bg-green-500 border-green-500 text-white" : "bg-blue-500 border-blue-500 text-white")
+                                        : ""}
+                                  ${stepStatus === "rejected" ? "bg-red-500 border-red-500 text-white" : ""}
+                                  ${stepStatus === "pending" ? "bg-white border-gray-300 text-gray-400" : ""}
+                                `}>
                                     {stepStatus === "completed" && <FaCheck className="text-[10px]" />}
                                     {stepStatus === "rejected" && <FaTimes className="text-[10px]" />}
                                     {stepStatus === "pending" && <span className="text-xs">{index + 1}</span>}
@@ -180,11 +220,11 @@ export default function ComplaintLifecycle({ complaint, warehouseAssessment, qcA
 
                                 {/* Step Label */}
                                 <span className={`
-                  mt-2 text-[10px] text-center font-medium leading-tight
-                  ${stepStatus === "completed" ? "text-green-700" : ""}
-                  ${stepStatus === "rejected" ? "text-red-700" : ""}
-                  ${stepStatus === "pending" ? "text-gray-500" : ""}
-                `}>
+                                  mt-2 text-[10px] text-center font-bold leading-tight uppercase tracking-wider
+                                  ${stepStatus === "completed" ? (step.key === "resolved" ? "text-green-600" : "text-blue-600") : ""}
+                                  ${stepStatus === "rejected" ? "text-red-700" : ""}
+                                  ${stepStatus === "pending" ? "text-gray-500" : ""}
+                                `}>
                                     {step.label}
                                 </span>
 

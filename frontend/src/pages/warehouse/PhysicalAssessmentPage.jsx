@@ -26,7 +26,7 @@ export default function PhysicalAssessmentPage() {
   /* ================= LOAD COMPLAINT ================= */
   useEffect(() => {
     api
-  .get(`/grievance/complaint-user/view/${code}`)
+      .get(`/grievance/complaint-user/view/${code}`)
 
       .then(res => setComplaint(res.data))
       .catch(() => alert("Failed to load complaint"));
@@ -71,13 +71,13 @@ export default function PhysicalAssessmentPage() {
       });
 
       await api.post(
-  "/grievance/warehouse/assessment/submit",
+        "/grievance/warehouse/assessment/submit",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       alert("Physical assessment submitted successfully");
-      navigate(`/warehouse/assessment/submitted/${code}`);
+      navigate(`/warehouse/assessment/view/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Submit failed");

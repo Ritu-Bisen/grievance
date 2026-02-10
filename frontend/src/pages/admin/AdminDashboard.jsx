@@ -8,8 +8,10 @@
 /*  - File length intentionally kept LARGE (>350 lines)         */
 /* ============================================================= */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import api from "../../services/api.js";
 import GovHeader from "../../components/GovHeader";
 
@@ -20,6 +22,7 @@ import {
   FaTruck,
   FaCheckCircle,
   FaClock,
+  FaDownload,
   FaTimesCircle,
   FaFileAlt,
   FaBroom,
@@ -49,53 +52,49 @@ export default function AdminDashboard() {
   /*                           STATE                               */
   /* ============================================================= */
 
+  /* VIEW STATE */
+  const [activeView, setActiveView] = useState("DASHBOARD"); // DASHBOARD, TABLE, AVG, RESOLUTION
+
+  /* DATA STATE */
   const [complaints, setComplaints] = useState([]);
-  // ===== AVG HANDLING TIME (SEPARATE FROM COMPLAINT TABLE) =====
-  const [avgTimeData, setAvgTimeData] = useState(null);
-  // ===== RESOLUTION TIME GRAPH =====
-  const [resolutionGraph, setResolutionGraph] = useState(null);
-  // ===== RESOLUTION TABLE STATE =====
-  const [resolutionTable, setResolutionTable] = useState([]);
-  const [showResolutionTable, setShowResolutionTable] = useState(false);
-  const [resolutionRange, setResolutionRange] = useState("");
-
-
-  const [avgTableData, setAvgTableData] = useState([]);
-  const [showAvgTable, setShowAvgTable] = useState(false);
-  const [avgModule, setAvgModule] = useState(""); // FACILITY | WAREHOUSE | QC
-
   const [counts, setCounts] = useState({});
-
-  /* 🔒 FIXED TOTAL COUNT */
   const [totalComplaints, setTotalComplaints] = useState(0);
 
-  /* STATUS FILTERS */
+  /* GRAPH & TABLE DATA */
+  const [avgTimeData, setAvgTimeData] = useState(null);
+  const [resolutionGraph, setResolutionGraph] = useState(null);
+
+  /* INTERACTIVE STATE */
+  const [avgTableData, setAvgTableData] = useState([]);
+  const [avgModule, setAvgModule] = useState("");
+  const [resolutionTable, setResolutionTable] = useState([]);
+  const [resolutionRange, setResolutionRange] = useState("");
+
+  /* STATUS FILTER STATE */
   const [statusGroup, setStatusGroup] = useState("");
   const [status, setStatus] = useState("");
 
-  /* TABLE VISIBILITY */
-  const [showTable, setShowTable] = useState(false);
-
   /* ============================================================= */
-  /*                       FILTER STATE                            */
+  /*                      FILTER STATE                             */
   /* ============================================================= */
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [complaintType, setComplaintType] = useState("");
+  const [dateFilter, setDateFilter] = useState("ALL");
 
   /* ============================================================= */
   /*                      API CALL LOGIC                           */
   /* ============================================================= */
 
-  const loadDashboard = async (sg = "", st = "", forceShow = false) => {
+  const loadDashboard = async (sg = "", st = "", forceShow = false, fDate = fromDate, tDate = toDate) => {
     try {
       const res = await api.get("/grievance/admin/dashboard", {
         params: {
           statusGroup: sg,
           status: st,
-          fromDate,
-          toDate,
+          fromDate: fDate,
+          toDate: tDate,
           complaintType,
           _t: Date.now()
         }
@@ -114,8 +113,10 @@ export default function AdminDashboard() {
       setStatusGroup(sg);
       setStatus(st);
 
-      if (forceShow || sg || st || fromDate || toDate || complaintType) {
-        setShowTable(true);
+      if (forceShow || sg || st || fDate || tDate || complaintType) {
+        setActiveView("TABLE");
+      } else {
+        setActiveView("DASHBOARD");
       }
 
     } catch (err) {
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboard("", "");
-    setShowTable(false);
+    setActiveView("DASHBOARD");
 
     api
       .get("/grievance/admin/avg-handling-time")
@@ -141,6 +142,18 @@ export default function AdminDashboard() {
       .then(res => setResolutionGraph(res.data))
       .catch(() => { });
   }, []);
+
+  // Add table ref for focused scrolling
+  const tableRef = useRef(null);
+
+  // Auto-scroll when activeView changes to a table view
+  useEffect(() => {
+    if (activeView === 'TABLE' || activeView === 'AVG_TABLE' || activeView === 'RESOLUTION_TABLE') {
+      if (tableRef.current) {
+        tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [activeView, status, statusGroup, avgModule, resolutionRange]);
 
 
 
@@ -154,10 +167,172 @@ export default function AdminDashboard() {
     setFromDate("");
     setToDate("");
     setComplaintType("");
+    setDateFilter("ALL");
     setComplaints([]);
-    setShowTable(false);
-    setShowAvgTable(false);
-    setShowResolutionTable(false);
+    setActiveView("DASHBOARD");
+    loadDashboard("", "", false, "", "");
+  };
+
+  /* ============================================================= */
+  /*                     DOWNLOAD HANDLERS                         */
+  /* ============================================================= */
+
+  const [activeDownloadMenu, setActiveDownloadMenu] = useState(null); // 'MAIN', 'TABLE', 'AVG', 'RES'
+
+  const handleSpecificDownload = (type, format) => {
+    setActiveDownloadMenu(null);
+    const doc = new jsPDF();
+    let data = [];
+    let headers = [];
+    let title = "";
+    let filename = "";
+
+    if (type === 'TABLE' || type === 'MAIN') {
+      data = complaints;
+      headers = [["ID", "Start Date", "End Date", "Type", "Status"]];
+      title = "Grievance Report";
+      filename = `grievance_report_${new Date().toISOString().split('T')[0]}`;
+    } else if (type === 'AVG') {
+      data = avgTableData;
+      headers = [["Complaint ID", "Start Date", "End Date", "Days Taken"]];
+      title = `Average Time Analysis: ${avgModule}`;
+      filename = `avg_time_report_${avgModule}_${new Date().toISOString().split('T')[0]}`;
+    } else if (type === 'RES') {
+      data = resolutionTable;
+      headers = [["Complaint ID", "Start Date", "End Date", "Days Taken"]];
+      title = `Resolution Time: ${resolutionRange}`;
+      filename = `resolution_report_${resolutionRange}_${new Date().toISOString().split('T')[0]}`;
+    }
+
+    if (format === 'CSV') {
+      const csvRows = [headers[0]];
+      data.forEach(row => {
+        if (type === 'TABLE' || type === 'MAIN') {
+          csvRows.push([
+            row.complaint_code,
+            row.created_at ? new Date(row.created_at).toLocaleDateString() : '-',
+            row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : '-',
+            row.complaint_type,
+            row.status
+          ]);
+        } else {
+          csvRows.push([
+            row.code,
+            row.start_date || row.created_at ? new Date(row.start_date || row.created_at).toLocaleDateString() : '-',
+            row.end_date || row.resolved_at ? new Date(row.end_date || row.resolved_at).toLocaleDateString() : '-',
+            row.days
+          ]);
+        }
+      });
+
+      const csvContent = csvRows.map(e => e.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${filename}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // PDF
+      doc.text(title, 14, 22);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+      const tableBody = data.map(row => {
+        if (type === 'TABLE' || type === 'MAIN') {
+          return [
+            row.complaint_code,
+            row.created_at ? new Date(row.created_at).toLocaleDateString() : '-',
+            row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : '-',
+            row.complaint_type,
+            row.status
+          ];
+        } else {
+          return [
+            row.code,
+            row.start_date || row.created_at ? new Date(row.start_date || row.created_at).toLocaleDateString() : '-',
+            row.end_date || row.resolved_at ? new Date(row.end_date || row.resolved_at).toLocaleDateString() : '-',
+            row.days
+          ];
+        }
+      });
+
+      autoTable(doc, {
+        startY: 40,
+        head: headers,
+        body: tableBody,
+      });
+
+      doc.save(`${filename}.pdf`);
+    }
+  };
+
+  /* ============================================================= */
+  /*                   DATE FILTER HANDLER                         */
+  /* ============================================================= */
+
+  const handleDateFilterChange = (value) => {
+    setDateFilter(value);
+
+    if (value === "ALL" || value === "CUSTOM") {
+      if (value === "ALL") {
+        setFromDate("");
+        setToDate("");
+        loadDashboard(statusGroup, status, true, "", "");
+      }
+      return;
+    }
+
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    switch (value) {
+      case "TODAY":
+        break;
+      case "YESTERDAY":
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        break;
+      case "LAST_7_DAYS":
+        start.setDate(today.getDate() - 7);
+        break;
+      case "LAST_30_DAYS":
+        start.setDate(today.getDate() - 30);
+        break;
+      case "THIS_MONTH":
+        start.setDate(1);
+        break;
+      case "LAST_MONTH":
+        start.setMonth(today.getMonth() - 1);
+        start.setDate(1);
+        end.setDate(0);
+        break;
+      default:
+        break;
+    }
+
+    const format = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const formattedStart = format(start);
+    const formattedEnd = (value === "LAST_MONTH") ? format(end) : format(today);
+
+    setFromDate(formattedStart);
+    setToDate(formattedEnd);
+
+    loadDashboard(statusGroup, status, true, formattedStart, formattedEnd);
   };
   /* ============================================================= */
   /*              STATUS BAR GRAPH DATA (ADD HERE)                 */
@@ -176,35 +351,35 @@ export default function AdminDashboard() {
     },
 
     {
-      label: "Dispatched (Facility)",
+      label: "Dispatched (FAC)",
       count: counts.SAMPLE_DISPATCHED_FACILITY || 0,
       sg: "",
       st: "SAMPLE_DISPATCHED_FACILITY",
       icon: <FaShippingFast className="text-2xl" />,
-      color: "bg-amber-500",
-      hoverColor: "hover:bg-amber-600",
-      gradient: "from-amber-400 to-amber-600"
+      color: "bg-indigo-500",
+      hoverColor: "hover:bg-indigo-600",
+      gradient: "from-indigo-400 to-indigo-600"
     },
     {
-      label: "Dispatched (Warehouse)",
+      label: "Dispatched (WH)",
       count: counts.SAMPLE_DISPATCHED_WH || 0,
       sg: "",
       st: "SAMPLE_DISPATCHED_WH",
       icon: <FaTruck className="text-2xl" />,
-      color: "bg-yellow-600",
-      hoverColor: "hover:bg-yellow-700",
-      gradient: "from-yellow-500 to-yellow-700"
+      color: "bg-sky-600",
+      hoverColor: "hover:bg-sky-700",
+      gradient: "from-sky-500 to-sky-700"
     },
 
     {
-      label: "Received (Warehouse)",
+      label: "Received (WH)",
       count: counts.SAMPLE_RECEIVED_WH || 0,
       sg: "",
       st: "SAMPLE_RECEIVED_WH",
       icon: <FaWarehouse className="text-2xl" />,
-      color: "bg-purple-600",
-      hoverColor: "hover:bg-purple-700",
-      gradient: "from-purple-500 to-purple-700"
+      color: "bg-cyan-600",
+      hoverColor: "hover:bg-cyan-700",
+      gradient: "from-cyan-500 to-cyan-700"
     },
     {
       label: "Received (QC)",
@@ -212,20 +387,20 @@ export default function AdminDashboard() {
       sg: "",
       st: "SAMPLE_RECEIVED_QC",
       icon: <FaFlask className="text-2xl" />,
-      color: "bg-indigo-600",
-      hoverColor: "hover:bg-indigo-700",
-      gradient: "from-indigo-500 to-indigo-700"
+      color: "bg-teal-600",
+      hoverColor: "hover:bg-teal-700",
+      gradient: "from-teal-500 to-teal-700"
     },
 
     {
-      label: "In Progress (Warehouse)",
+      label: "In Progress (WH)",
       count: counts.IN_PROGRESS_WH || 0,
       sg: "",
       st: "IN_PROGRESS_WH",
       icon: <FaBoxOpen className="text-2xl" />,
-      color: "bg-orange-600",
-      hoverColor: "hover:bg-orange-700",
-      gradient: "from-orange-500 to-orange-700"
+      color: "bg-sky-500",
+      hoverColor: "hover:bg-sky-600",
+      gradient: "from-sky-400 to-sky-600"
     },
     {
       label: "In Progress (QC)",
@@ -233,9 +408,9 @@ export default function AdminDashboard() {
       sg: "",
       st: "IN_PROGRESS_QC",
       icon: <FaClock className="text-2xl" />,
-      color: "bg-pink-600",
-      hoverColor: "hover:bg-pink-700",
-      gradient: "from-pink-500 to-pink-700"
+      color: "bg-blue-500",
+      hoverColor: "hover:bg-blue-600",
+      gradient: "from-blue-400 to-blue-600"
     },
 
     {
@@ -244,9 +419,9 @@ export default function AdminDashboard() {
       sg: "",
       st: "REJECTED_WH",
       icon: <FaTimesCircle className="text-2xl" />,
-      color: "bg-red-700",
-      hoverColor: "hover:bg-red-800",
-      gradient: "from-red-600 to-red-800"
+      color: "bg-red-600",
+      hoverColor: "hover:bg-red-700",
+      gradient: "from-red-500 to-red-700"
     },
     {
       label: "Resolved",
@@ -266,21 +441,21 @@ export default function AdminDashboard() {
       value: avgTimeData?.average?.facility || 0,
       key: "FACILITY",
       icon: <FaShippingFast className="text-2xl" />,
-      gradient: "from-cyan-500 to-cyan-700"
+      gradient: "from-blue-500 to-blue-700"
     },
     {
       label: "Warehouse",
       value: avgTimeData?.average?.warehouse || 0,
       key: "WAREHOUSE",
       icon: <FaWarehouse className="text-2xl" />,
-      gradient: "from-teal-500 to-teal-700"
+      gradient: "from-indigo-500 to-indigo-700"
     },
     {
       label: "QC",
       value: avgTimeData?.average?.qc || 0,
       key: "QC",
       icon: <FaFlask className="text-2xl" />,
-      gradient: "from-emerald-500 to-emerald-700"
+      gradient: "from-sky-500 to-sky-700"
     }
   ];
   // ===== RESOLUTION TIME BARS =====
@@ -289,28 +464,28 @@ export default function AdminDashboard() {
       label: "0–10 Days",
       key: "0_10",
       value: resolutionGraph?.summary?.["0_10"] || 0,
-      gradient: "from-green-500 to-green-700",
+      gradient: "from-blue-400 to-blue-600",
       icon: <FaCheckCircle className="text-xl" />
     },
     {
       label: "11–20 Days",
       key: "11_20",
       value: resolutionGraph?.summary?.["11_20"] || 0,
-      gradient: "from-yellow-500 to-yellow-700",
+      gradient: "from-indigo-400 to-indigo-600",
       icon: <FaClock className="text-xl" />
     },
     {
       label: "21–100 Days",
       key: "21_100",
       value: resolutionGraph?.summary?.["21_100"] || 0,
-      gradient: "from-orange-500 to-orange-700",
+      gradient: "from-sky-400 to-sky-600",
       icon: <FaCalendarAlt className="text-xl" />
     },
     {
       label: "100+ Days",
       key: "100_plus",
       value: resolutionGraph?.summary?.["100_plus"] || 0,
-      gradient: "from-red-500 to-red-700",
+      gradient: "from-slate-400 to-slate-600",
       icon: <FaTimesCircle className="text-xl" />
     }
   ];
@@ -324,6 +499,7 @@ export default function AdminDashboard() {
     setFromDate("");
     setToDate("");
     setComplaintType("");
+    setDateFilter("ALL");
     loadDashboard("", "", true);
   };
   // ===== CSV DOWNLOAD HANDLER =====
@@ -371,7 +547,7 @@ export default function AdminDashboard() {
   const handleAvgBarClick = (moduleKey) => {
     setAvgModule(moduleKey);
     setAvgTableData(avgTimeData?.details?.[moduleKey] || []);
-    setShowAvgTable(true);
+    setActiveView("AVG_TABLE");
   };
   // ===== RESOLUTION BAR CLICK HANDLER =====
   const handleResolutionBarClick = (rangeKey, label) => {
@@ -379,684 +555,465 @@ export default function AdminDashboard() {
     setResolutionTable(
       resolutionGraph?.details?.[rangeKey] || []
     );
-    setShowResolutionTable(true);
+    setActiveView("RESOLUTION_TABLE");
   };
 
 
 
-  /* ============================================================= */
-  /*                           UI                                  */
-  /* ============================================================= */
+  const getStatusColor = (st) => {
+    switch (st) {
+      case 'SUBMITTED': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'SAMPLE_DISPATCHED_FACILITY': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'SAMPLE_DISPATCHED_WH': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'SAMPLE_RECEIVED_WH': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'SAMPLE_RECEIVED_QC': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      case 'IN_PROGRESS_WH': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'IN_PROGRESS_QC': return 'bg-pink-100 text-pink-700 border-pink-200';
+      case 'REJECTED_WH': return 'bg-red-100 text-red-700 border-red-200';
+      case 'RESOLVED': return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-gray-50 to-blue-50">
+    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden font-inter">
 
+      {/* ================= GOV HEADER ================= */}
       <GovHeader />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* ================= PAGE HEADER ================= */}
+        {/* ================= SIDEBAR ================= */}
+        <div className="w-80 bg-white border-r border-slate-200 flex flex-col h-full shadow-lg z-20">
 
-        <div className="flex items-center justify-between bg-gradient-to-r from-white to-indigo-50 shadow-xl border-l-8 border-indigo-700 rounded-xl px-6 py-5 hover:shadow-2xl transition-shadow duration-300">
-
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl shadow-lg">
-              <FaUserShield className="text-white text-3xl" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
-                Admin Dashboard
-              </h2>
-              <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
-                <FaChartLine className="text-indigo-600" />
-                Consolidated grievance monitoring
-              </p>
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-md">
+                <FaUserShield size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Admin Panel</h2>
+                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1">Grievance Dashboard</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Scrollable Status List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+
+            <div className="px-2 mb-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Overview</p>
+            </div>
+
             <button
-              onClick={handleCSVDownload}
-              className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-300 px-5 py-3 rounded-xl text-green-700 font-semibold hover:from-green-100 hover:to-emerald-200 hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+              onClick={handleTotalComplaintsClick}
+              className={`w-full p-4 rounded-xl text-left border transition-all duration-200 group relative overflow-hidden ${!status && !statusGroup ? 'bg-indigo-600 border-indigo-600 text-white shadow-md ring-2 ring-indigo-100' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-sm text-slate-600'
+                }`}
             >
-              <FaFileAlt className="text-lg" />
-              Download CSV
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${!status && !statusGroup ? 'text-indigo-100' : 'text-slate-400'}`}>Total Complaints</span>
+                <FaChartBar className={!status && !statusGroup ? 'text-white' : 'text-indigo-600'} />
+              </div>
+              <div className={`text-3xl font-black relative z-10 ${!status && !statusGroup ? 'text-white' : 'text-slate-800'}`}>
+                {totalComplaints}
+              </div>
+              {/* Background Pattern for Active State */}
+              {!status && !statusGroup && (
+                <div className="absolute right-0 bottom-0 opacity-10 transform translate-y-1/4 translate-x-1/4">
+                  <FaChartBar size={80} />
+                </div>
+              )}
             </button>
 
+            <div className="px-2 mt-6 mb-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Filters</p>
+            </div>
+
+            {statusBarData.map((item) => {
+              const isActive = status === item.st || (item.sg && statusGroup === item.sg);
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => loadDashboard(item.sg, item.st, true)}
+                  className={`w-full p-3 rounded-xl text-left border transition-all duration-200 flex items-center justify-between group ${isActive
+                    ? 'bg-slate-800 border-slate-800 text-white shadow-md'
+                    : 'bg-white border-slate-200 hover:border-indigo-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-indigo-600'}`}>
+                      {item.icon}
+                    </div>
+                    <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
+                  </div>
+                  <span className={`text-xs font-black ${isActive ? 'bg-white text-slate-800' : 'bg-slate-100 text-slate-600'} px-2 py-1 rounded-md`}>
+                    {item.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-4 border-t border-slate-200 bg-slate-50">
             <button
               onClick={clearFilters}
-              className="flex items-center gap-2 bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 px-5 py-3 rounded-xl text-red-700 font-semibold hover:from-red-100 hover:to-red-200 hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-600 px-4 py-3 rounded-xl text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all duration-200"
             >
-              <FaBroom className="text-lg" />
-              Clear Filters
-            </button>
-          </div>
-
-        </div>
-
-        {/* ================= FILTER SECTION ================= */}
-
-        <div className="bg-white shadow-xl rounded-2xl px-8 py-6 border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-3 rounded-xl">
-              <FaFilter className="text-white text-lg" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800">Advanced Filters</h3>
-          </div>
-
-          <div className="flex flex-wrap gap-6 items-end">
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs font-bold text-gray-600 mb-2 flex items-center gap-2">
-                <FaCalendarAlt className="text-indigo-600" />
-                From Date
-              </label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300"
-              />
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs font-bold text-gray-600 mb-2 flex items-center gap-2">
-                <FaCalendarAlt className="text-indigo-600" />
-                To Date
-              </label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300"
-              />
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs font-bold text-gray-600 mb-2 flex items-center gap-2">
-                <FaLayerGroup className="text-indigo-600" />
-                Complaint Type
-              </label>
-              <select
-                value={complaintType}
-                onChange={e => setComplaintType(e.target.value)}
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300 cursor-pointer">
-                <option value="">All</option>
-                <option value="PHYSICAL">Physical</option>
-                <option value="QUALITY">Quality</option>
-                <option value="ADR">ADR</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => loadDashboard(statusGroup, status, true)}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
-              Apply Filters
+              <FaBroom /> Clear All Filters
             </button>
           </div>
         </div>
 
-        {/* ================= STATUS CARDS ================= */}
+        {/* ================= MAIN CONTENT ================= */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 relative">
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-          {/* TOTAL */}
-          <button
-            onClick={handleTotalComplaintsClick}
-            className="bg-gradient-to-br from-slate-500 to-slate-700 rounded-2xl shadow-xl p-7 hover:scale-105 hover:shadow-2xl transition-all duration-300 text-left group">
-            <div className="flex items-center gap-3 mb-3">
-              <FaChartBar className="text-3xl text-white group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <p className="text-sm text-slate-300 font-semibold mb-1">Total Complaints</p>
-            <p className="text-4xl font-bold text-white">{totalComplaints}</p>
-          </button>
-
-          {/* SUBMITTED */}
-          <button
-            onClick={() => loadDashboard("", "SUBMITTED", true)}
-            className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl shadow-blue-500/30 p-7 hover:scale-105 hover:shadow-2xl transition-all duration-300 text-left group">
-            <div className="flex items-center gap-3 mb-3">
-              <FaClipboardCheck className="text-3xl text-white group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <p className="text-sm text-blue-100 font-semibold mb-1">Submitted</p>
-            <p className="text-4xl font-bold text-white">{counts.SUBMITTED || 0}</p>
-          </button>
-
-          {/* SAMPLE DISPATCHED */}
-          <div
-            onClick={() => loadDashboard("DISPATCHED", "", true)}
-            className="cursor-pointer bg-white rounded-2xl shadow-xl border-t-4 border-yellow-500 p-6 space-y-3 hover:shadow-2xl hover:scale-105 transition-all duration-300">
-
-            <p className="font-bold text-gray-800 flex items-center gap-2">
-              <FaTruck className="text-yellow-600 text-xl" />
-              Sample Dispatched ({counts.SAMPLE_DISPATCHED_TOTAL || 0})
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "SAMPLE_DISPATCHED_FACILITY", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-300 px-3 py-2 rounded-lg font-semibold text-amber-700 hover:from-amber-100 hover:to-amber-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaShippingFast />
-                Facility ({counts.SAMPLE_DISPATCHED_FACILITY || 0})
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "SAMPLE_DISPATCHED_WH", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400 px-3 py-2 rounded-lg font-semibold text-yellow-700 hover:from-yellow-100 hover:to-yellow-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaTruck />
-                Warehouse ({counts.SAMPLE_DISPATCHED_WH || 0})
-              </button>
-            </div>
-          </div>
-
-          {/* SAMPLE RECEIVED */}
-          <div
-            onClick={() => loadDashboard("RECEIVED", "", true)}
-            className="cursor-pointer bg-white rounded-2xl shadow-xl border-t-4 border-purple-500 p-6 space-y-3 hover:shadow-2xl hover:scale-105 transition-all duration-300">
-
-            <p className="font-bold text-gray-800 flex items-center gap-2">
-              <FaWarehouse className="text-purple-600 text-xl" />
-              Sample Received ({counts.SAMPLE_RECEIVED_TOTAL || 0})
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "SAMPLE_RECEIVED_WH", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-300 px-3 py-2 rounded-lg font-semibold text-purple-700 hover:from-purple-100 hover:to-purple-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaWarehouse />
-                Warehouse ({counts.SAMPLE_RECEIVED_WH || 0})
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "SAMPLE_RECEIVED_QC", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-indigo-50 to-indigo-100 border-2 border-indigo-300 px-3 py-2 rounded-lg font-semibold text-indigo-700 hover:from-indigo-100 hover:to-indigo-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaFlask />
-                QC ({counts.SAMPLE_RECEIVED_QC || 0})
-              </button>
-            </div>
-          </div>
-
-          {/* IN PROGRESS */}
-          <div
-            onClick={() => loadDashboard("IN_PROGRESS", "", true)}
-            className="cursor-pointer bg-white rounded-2xl shadow-xl border-t-4 border-orange-500 p-6 space-y-3 hover:shadow-2xl hover:scale-105 transition-all duration-300">
-
-            <p className="font-bold text-gray-800 flex items-center gap-2">
-              <FaClock className="text-orange-600 text-xl" />
-              In Progress ({counts.IN_PROGRESS_TOTAL || 0})
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "IN_PROGRESS_WH", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-300 px-3 py-2 rounded-lg font-semibold text-orange-700 hover:from-orange-100 hover:to-orange-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaBoxOpen />
-                Warehouse ({counts.IN_PROGRESS_WH || 0})
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  loadDashboard("", "IN_PROGRESS_QC", true);
-                }}
-                className="flex-1 text-xs bg-gradient-to-r from-pink-50 to-pink-100 border-2 border-pink-300 px-3 py-2 rounded-lg font-semibold text-pink-700 hover:from-pink-100 hover:to-pink-200 transition-all duration-300 flex items-center justify-center gap-1">
-                <FaClock />
-                QC ({counts.IN_PROGRESS_QC || 0})
-              </button>
-            </div>
-          </div>
-
-          {/* REJECTED */}
-          <button
-            onClick={() => loadDashboard("", "REJECTED_WH", true)}
-            className="bg-gradient-to-br from-red-600 to-red-800 rounded-2xl shadow-xl shadow-red-500/30 p-7 hover:scale-105 hover:shadow-2xl transition-all duration-300 text-left group">
-            <div className="flex items-center gap-3 mb-3">
-              <FaTimesCircle className="text-3xl text-white group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <p className="text-sm text-red-100 font-semibold mb-1">Rejected</p>
-            <p className="text-4xl font-bold text-white">{counts.REJECTED_WH || 0}</p>
-          </button>
-
-          {/* RESOLVED */}
-          <button
-            onClick={() => loadDashboard("", "RESOLVED", true)}
-            className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl shadow-green-500/30 p-7 hover:scale-105 hover:shadow-2xl transition-all duration-300 text-left group">
-            <div className="flex items-center gap-3 mb-3">
-              <FaCheckCircle className="text-3xl text-white group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <p className="text-sm text-green-100 font-semibold mb-1">Resolved</p>
-            <p className="text-4xl font-bold text-white">{counts.RESOLVED || 0}</p>
-          </button>
-
-        </div>
-
-        {/* ================= TABLE ================= */}
-
-        {showTable && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
-
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
-              <h3 className="text-white text-lg font-bold flex items-center gap-2">
-                <FaFileAlt />
-                Grievance Records ({complaints.length})
-              </h3>
+          {/* Top Bar */}
+          <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm z-10">
+            <div>
+              <h1 className="text-xl font-black text-slate-800 tracking-tight">Dashboard Overview</h1>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                {status ? `Filtered by: ${status}` : activeView === 'DASHBOARD' ? 'Showing all records' : 'Filtered View'}
+              </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="flex items-center gap-3">
+              {/* CLEAR FILTER BUTTON */}
+              {(status || statusGroup || fromDate || toDate || complaintType || dateFilter !== "ALL") && (
+                <button
+                  onClick={clearFilters}
+                  className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-2"
+                >
+                  <FaBroom /> Clear
+                </button>
+              )}
+              <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                <select
+                  value={dateFilter}
+                  onChange={(e) => handleDateFilterChange(e.target.value)}
+                  className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2 outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Time</option>
+                  <option value="TODAY">Today</option>
+                  <option value="YESTERDAY">Yesterday</option>
+                  <option value="LAST_7_DAYS">Last 7 Days</option>
+                  <option value="LAST_30_DAYS">Last 30 Days</option>
+                  <option value="THIS_MONTH">This Month</option>
+                  <option value="LAST_MONTH">Last Month</option>
+                  <option value="CUSTOM">Custom Range</option>
+                </select>
 
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                  <tr>
-                    {["Complaint ID", "Type", "Facility", "Item", "Status", "Date", "Report"].map(h => (
-                      <th key={h} className="p-4 text-left font-bold text-gray-700 uppercase text-xs tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
+                {dateFilter === "CUSTOM" && (
+                  <>
+                    <div className="w-px h-4 bg-slate-300 mx-2"></div>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={e => setFromDate(e.target.value)}
+                      className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2"
+                    />
+                    <span className="text-slate-400 text-[10px] font-black uppercase">TO</span>
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={e => setToDate(e.target.value)}
+                      className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2"
+                    />
+                    <button onClick={() => loadDashboard(statusGroup, status, true, fromDate, toDate)} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-md shadow-sm transition-colors">
+                      <FaFilter size={10} />
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setActiveDownloadMenu(activeDownloadMenu === 'MAIN' ? null : 'MAIN')}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <FaDownload /> Download
+                </button>
 
-                <tbody>
+                {activeDownloadMenu === 'MAIN' && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                    <button
+                      onClick={() => handleSpecificDownload('MAIN', 'CSV')}
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-2"
+                    >
+                      <span className="text-green-600">CSV</span> Export
+                    </button>
+                    <button
+                      onClick={() => handleSpecificDownload('MAIN', 'PDF')}
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-2"
+                    >
+                      <span className="text-red-500">PDF</span> Export
+                    </button>
+                  </div>
+                )}
+              </div>
 
-                  {complaints.length === 0 && (
-                    <tr>
-                      <td colSpan="7" className="p-12 text-center text-gray-500">
-                        <div className="flex flex-col items-center gap-3">
-                          <FaFileAlt className="text-5xl text-gray-300" />
-                          <p className="text-lg font-semibold">No records found</p>
+
+
+
+            </div>
+          </header>
+
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+
+            {/* DYNAMIC CONTENT (TABLES) */}
+            <div className="space-y-8 pb-12">
+
+              {activeView === 'TABLE' && (
+                <div ref={tableRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-slide-up">
+                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <span className="bg-indigo-100 text-indigo-700 p-1.5 rounded-md"><FaFileAlt size={12} /></span>
+                      Grievance Records
+                      <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2">{complaints.length}</span>
+                    </h3>
+
+                    {/* TABLE DOWNLOAD */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setActiveDownloadMenu(activeDownloadMenu === 'TABLE' ? null : 'TABLE')}
+                        className="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50"
+                      >
+                        <FaDownload size={10} /> Download
+                      </button>
+                      {activeDownloadMenu === 'TABLE' && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-50">
+                          <button onClick={() => handleSpecificDownload('TABLE', 'CSV')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">CSV Export</button>
+                          <button onClick={() => handleSpecificDownload('TABLE', 'PDF')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">PDF Export</button>
                         </div>
-                      </td>
-                    </tr>
-                  )}
+                      )}
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold tracking-wider">
+                        <tr>
+                          {["ID", "Start Date", "End Date", "Type", "Facility", "Item", "Status", "Action"].map(h => (
+                            <th key={h} className="px-6 py-4 text-left">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {complaints.length === 0 ? (
+                          <tr><td colSpan="7" className="p-12 text-center text-slate-400 font-medium italic">No records found for this selection.</td></tr>
+                        ) : (
+                          complaints.map((c) => (
+                            <tr key={c.complaint_code} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 font-bold text-indigo-600">{c.complaint_code}</td>
+                              <td className="px-6 py-4 text-slate-600 text-xs font-bold whitespace-nowrap">
+                                {c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}
+                              </td>
+                              <td className="px-6 py-4 text-slate-600 text-xs font-bold whitespace-nowrap">
+                                {c.resolved_at ? new Date(c.resolved_at).toLocaleDateString() :
+                                  c.rejected_at ? new Date(c.rejected_at).toLocaleDateString() : '-'}
+                              </td>
+                              <td className="px-6 py-4 font-semibold text-slate-700">{c.complaint_type}</td>
+                              <td className="px-6 py-4 text-slate-600">{c.facility_name}</td>
+                              <td className="px-6 py-4 text-slate-600 truncate max-w-[150px]" title={c.item_name}>{c.item_name}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${getStatusColor(c.status)}`}>
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => navigate(`/admin/report/view/${c.complaint_code}`)}
+                                  className="text-indigo-600 hover:text-indigo-800 font-bold text-xs border border-indigo-200 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
-                  {complaints.map((c, i) => (
-                    <tr key={c.complaint_code}
-                      className={`border-t hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 ${i % 2 === 0 ? "bg-gray-50" : "bg-white"}`}>
-                      <td className="p-4 font-bold text-indigo-700">{c.complaint_code}</td>
-                      <td className="p-4 font-semibold">{c.complaint_type}</td>
-                      <td className="p-4 text-gray-700">{c.facility_name}</td>
-                      <td className="p-4 text-gray-700">{c.item_name}</td>
-                      <td className="p-4">
-                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-semibold">
-                          {c.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-gray-600">{new Date(c.created_at).toLocaleDateString()}</td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => navigate(`/admin/report/view/${c.complaint_code}`)}
-                          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-                          <FaFileAlt /> View Report
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
 
-                </tbody>
+              {/* GRAPHS SECTION (Always visible, pushed down by table if active) */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
 
-              </table>
-            </div>
-          </div>
-        )}
-        {showAvgTable && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mt-8">
+                {/* STATUS BAR GRAPH */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 xl:col-span-2">
+                  <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <FaChartBar className="text-blue-500" /> Overall Status Distribution
+                  </h3>
+                  <div className="h-64 flex items-end justify-between gap-2 px-4">
+                    {statusBarData.map(bar => {
+                      const maxCount = Math.max(...statusBarData.map(b => b.count), 1);
+                      const height = bar.count === 0 ? 2 : Math.max((bar.count / maxCount) * 100, 10);
 
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4">
-              <h3 className="text-white text-lg font-bold">
-                {avgModule} – Time Spent (Days)
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="p-4 text-left font-bold">Complaint ID</th>
-                    <th className="p-4 text-left font-bold">Days Spent</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {avgTableData.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="p-8 text-center text-gray-500">
-                        No records found
-                      </td>
-                    </tr>
-                  )}
-
-                  {avgTableData.map(row => (
-                    <tr key={row.code} className="border-t">
-                      <td className="p-4 font-semibold text-indigo-700">
-                        {row.code}
-                      </td>
-                      <td className="p-4 font-semibold">
-                        {row.days} Days
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================= */}
-        {/*                STATUS BAR GRAPH (ADD AT BOTTOM)              */}
-        {/* ============================================================= */}
-
-        <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
-
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-xl shadow-lg">
-              <FaChartBar className="text-white text-2xl" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-800">
-              Status-wise Grievance Overview
-            </h3>
-          </div>
-
-          <div className="flex items-end gap-4 h-80 overflow-x-auto pb-2">
-
-            {statusBarData.map((bar) => (
-              <div
-                key={bar.label}
-                onClick={() => loadDashboard(bar.sg, bar.st, true)}
-                className="min-w-[110px] cursor-pointer flex flex-col items-center group"
-              >
-                {/* ICON */}
-                <div className="mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
-                  {bar.icon}
+                      return (
+                        <div key={bar.label} className="flex flex-col items-center group flex-1 cursor-pointer h-full justify-end" onClick={() => loadDashboard(bar.sg, bar.st, true)}>
+                          <div className={`mb-2 text-xs font-bold text-slate-600 transition-colors ${bar.hoverColor.replace('bg', 'text')}`}>{bar.count}</div>
+                          <div className="w-full h-full flex items-end">
+                            <div className={`w-full rounded-t-lg bg-gradient-to-t ${bar.gradient} shadow-md transition-all duration-300 relative overflow-hidden`} style={{ height: `${height}%` }}></div>
+                          </div>
+                          <div className="mt-2 text-[10px] text-center font-bold text-slate-400 group-hover:text-slate-800 uppercase tracking-tight leading-3">{bar.label}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* COUNT */}
-                <div className="text-lg font-bold mb-2 text-gray-800 group-hover:scale-110 transition-transform duration-300">
-                  {bar.count}
+                {/* AVG HANDLING TIME */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <FaChartLine className="text-green-500" /> Avg. Handling Time (Days)
+                  </h3>
+                  <div className="flex items-end justify-around h-48">
+                    {avgHandlingBars.map(bar => {
+                      const maxVal = Math.max(...avgHandlingBars.map(b => b.value), 1);
+                      const height = bar.value === 0 ? 2 : Math.max((bar.value / maxVal) * 100, 10);
+
+                      return (
+                        <div key={bar.label} className="flex flex-col items-center cursor-pointer group h-full justify-end" onClick={() => handleAvgBarClick(bar.key)}>
+                          <span className="mb-2 font-black text-slate-700 text-lg group-hover:scale-110 transition-transform">{bar.value}</span>
+                          <div className="w-16 h-full flex items-end">
+                            <div className="w-full rounded-t-xl bg-gradient-to-t from-blue-500 to-blue-700 opacity-80 group-hover:opacity-100 transition-all duration-300" style={{ height: `${height}%` }}></div>
+                          </div>
+                          <span className="mt-3 text-xs font-bold text-slate-500 uppercase tracking-wider">{bar.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* BAR */}
-                <div
-                  className={`w-full rounded-t-xl bg-gradient-to-t ${bar.gradient} ${bar.hoverColor} transition-all duration-500 shadow-lg group-hover:shadow-2xl relative overflow-hidden`}
-                  style={{
-                    height: `${Math.max(bar.count * 8, 20)}px`
-                  }}
-                >
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/20 to-white/0 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                {/* RESOLUTION TIME */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <FaCheckCircle className="text-purple-500" /> Resolution Timeline
+                  </h3>
+                  <div className="flex items-end justify-around h-48">
+                    {resolutionBars.map(bar => {
+                      const maxVal = Math.max(...resolutionBars.map(b => b.value), 1);
+                      const height = bar.value === 0 ? 2 : Math.max((bar.value / maxVal) * 100, 10);
+
+                      return (
+                        <div key={bar.label} className="flex flex-col items-center cursor-pointer group h-full justify-end" onClick={() => handleResolutionBarClick(bar.key, bar.label)}>
+                          <span className="mb-2 font-black text-slate-700 text-lg group-hover:scale-110 transition-transform">{bar.value}</span>
+                          <div className="w-16 h-full flex items-end">
+                            <div className={`w-full rounded-t-xl bg-gradient-to-t ${bar.gradient} opacity-80 group-hover:opacity-100 transition-all duration-300`} style={{ height: `${height}%` }}></div>
+                          </div>
+                          <span className="mt-3 text-xs font-bold text-slate-500 uppercase tracking-wider">{bar.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* LABEL */}
-                <div className="mt-3 text-[11px] font-bold text-center text-gray-700 leading-tight group-hover:text-indigo-700 transition-colors duration-300">
-                  {bar.label}
-                </div>
-
-                {/* Percentage badge on hover */}
-                <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {totalComplaints > 0 ? `${((bar.count / totalComplaints) * 100).toFixed(1)}%` : '0%'}
-                  </span>
-                </div>
               </div>
-            ))}
 
-          </div>
+              {/* DETAIL TABLES (Rendered BELOW graphs) */}
 
-          {/* Summary Row */}
-          <div className="mt-8 grid grid-cols-3 gap-4 pt-6 border-t-2 border-gray-200">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-l-4 border-blue-600">
-              <p className="text-xs text-gray-600 font-semibold mb-1">Active Cases</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {totalComplaints -
-                  ((counts.RESOLVED || 0) + (counts.REJECTED_WH || 0))}
-              </p>
+              {activeView === 'AVG_TABLE' && (
+                <div ref={tableRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-slide-up">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-blue-50/50 flex items-center justify-between">
+                    <h3 className="font-bold text-blue-800 flex items-center gap-2">
+                      <FaClock /> Average Time Analysis: {avgModule}
+                    </h3>
+                    <div className="relative">
+                      <button
+                        onClick={() => setActiveDownloadMenu(activeDownloadMenu === 'AVG' ? null : 'AVG')}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50"
+                      >
+                        <FaDownload size={10} /> Download
+                      </button>
+                      {activeDownloadMenu === 'AVG' && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-50">
+                          <button onClick={() => handleSpecificDownload('AVG', 'CSV')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">CSV Export</button>
+                          <button onClick={() => handleSpecificDownload('AVG', 'PDF')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">PDF Export</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
+                      <tr>
+                        <th className="px-6 py-4 text-left">Complaint ID</th>
+                        <th className="px-6 py-4 text-left">Start Date</th>
+                        <th className="px-6 py-4 text-left">End Date</th>
+                        <th className="px-6 py-4 text-left">Days Taken</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {avgTableData.map(r => (
+                        <tr key={r.code} className="border-b border-slate-50 hover:bg-slate-50">
+                          <td className="px-6 py-4 font-bold text-slate-700">{r.code}</td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {r.start_date ? new Date(r.start_date).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {r.end_date ? new Date(r.end_date).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-green-600">{r.days} Days</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-            </div>
-            <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 border-l-4 border-red-600">
-              <p className="text-xs text-gray-600 font-semibold mb-1">Rejected</p>
-              <p className="text-2xl font-bold text-red-700">
-                {counts.REJECTED_WH || 0}
-              </p>
-            </div>
+              {activeView === 'RESOLUTION_TABLE' && (
+                <div ref={tableRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-slide-up">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-indigo-50/50 flex items-center justify-between">
+                    <h3 className="font-bold text-indigo-800 flex items-center gap-2">
+                      <FaCheckCircle /> Resolution Time: {resolutionRange}
+                    </h3>
+                    <div className="relative">
+                      <button
+                        onClick={() => setActiveDownloadMenu(activeDownloadMenu === 'RES' ? null : 'RES')}
+                        className="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50"
+                      >
+                        <FaDownload size={10} /> Download
+                      </button>
+                      {activeDownloadMenu === 'RES' && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-50">
+                          <button onClick={() => handleSpecificDownload('RES', 'CSV')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">CSV Export</button>
+                          <button onClick={() => handleSpecificDownload('RES', 'PDF')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50">PDF Export</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
+                      <tr>
+                        <th className="px-6 py-4 text-left">Complaint ID</th>
+                        <th className="px-6 py-4 text-left">Start Date</th>
+                        <th className="px-6 py-4 text-left">End Date</th>
+                        <th className="px-6 py-4 text-left">Days Taken</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resolutionTable.map(r => (
+                        <tr key={r.code} className="border-b border-slate-50 hover:bg-slate-50">
+                          <td className="px-6 py-4 font-bold text-slate-700">{r.code}</td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {r.resolved_at ? new Date(r.resolved_at).toLocaleDateString() :
+                              r.rejected_at ? new Date(r.rejected_at).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-purple-600">{r.days} Days</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-l-4 border-green-600">
-              <p className="text-xs text-gray-600 font-semibold mb-1">Resolution Rate</p>
-              <p className="text-2xl font-bold text-green-700">
-                {totalComplaints > 0 ? `${((counts.RESOLVED / totalComplaints) * 100).toFixed(1)}%` : '0%'}
-              </p>
             </div>
           </div>
         </div>
-
-        {/* ============================================================= */}
-        {/*      AVG HANDLING TIME & RESOLUTION TIME (SIDE BY SIDE)      */}
-        {/* ============================================================= */}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-          {/* LEFT: AVG HANDLING TIME */}
-          <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
-
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-3 rounded-xl shadow-lg">
-                <FaChartLine className="text-white text-2xl" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                Average Handling Time
-              </h3>
-            </div>
-
-            <div className="flex items-end justify-center gap-8 h-80 pb-2">
-
-              {avgHandlingBars.map((bar) => (
-                <div
-                  key={bar.key}
-                  onClick={() => handleAvgBarClick(bar.key)}
-                  className="cursor-pointer flex flex-col items-center group"
-                >
-                  {/* ICON */}
-                  <div className="mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
-                    {bar.icon}
-                  </div>
-
-                  {/* VALUE */}
-                  <div className="text-lg font-bold mb-2 text-gray-800 group-hover:scale-110 transition-transform duration-300">
-                    {bar.value}
-                  </div>
-
-                  {/* BAR */}
-                  <div
-                    className={`w-20 rounded-t-xl bg-gradient-to-t ${bar.gradient} hover:shadow-2xl transition-all duration-500 shadow-lg relative overflow-hidden`}
-                    style={{
-                      height: `${Math.max(bar.value * 10, 20)}px`
-                    }}
-                  >
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/20 to-white/0 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
-                  </div>
-
-                  {/* LABEL */}
-                  <div className="mt-3 text-sm font-bold text-center text-gray-700 group-hover:text-green-700 transition-colors duration-300">
-                    {bar.label}
-                  </div>
-
-                  {/* Days badge on hover */}
-                  <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {bar.value} Days
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-            </div>
-
-            {/* Summary Row */}
-            <div className="mt-8 grid grid-cols-3 gap-3 pt-6 border-t-2 border-gray-200">
-              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-3 border-l-4 border-cyan-600">
-                <p className="text-xs text-gray-600 font-semibold mb-1">Facility</p>
-                <p className="text-xl font-bold text-cyan-700">
-                  {avgHandlingBars[0]?.value || 0}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-3 border-l-4 border-teal-600">
-                <p className="text-xs text-gray-600 font-semibold mb-1">Warehouse</p>
-                <p className="text-xl font-bold text-teal-700">
-                  {avgHandlingBars[1]?.value || 0}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-3 border-l-4 border-emerald-600">
-                <p className="text-xs text-gray-600 font-semibold mb-1">QC</p>
-                <p className="text-xl font-bold text-emerald-700">
-                  {avgHandlingBars[2]?.value || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: RESOLUTION TIME */}
-          <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
-
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-gradient-to-br from-purple-600 to-violet-600 p-3 rounded-xl shadow-lg">
-                <FaCheckCircle className="text-white text-2xl" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                Resolution Time Distribution
-              </h3>
-            </div>
-
-            <div className="flex items-end justify-center gap-6 h-80 pb-2">
-
-              {resolutionBars.map((bar) => (
-                <div
-                  key={bar.label}
-                  onClick={() => handleResolutionBarClick(bar.key, bar.label)}
-                  className="cursor-pointer flex flex-col items-center group"
-                >
-                  {/* ICON */}
-                  <div className="mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
-                    {bar.icon}
-                  </div>
-
-                  {/* VALUE */}
-                  <div className="text-lg font-bold mb-2 text-gray-800 group-hover:scale-110 transition-transform duration-300">
-                    {bar.value}
-                  </div>
-
-                  {/* BAR */}
-                  <div
-                    className={`w-16 rounded-t-xl bg-gradient-to-t ${bar.gradient} hover:shadow-2xl transition-all duration-500 shadow-lg relative overflow-hidden`}
-                    style={{
-                      height: `${Math.max(bar.value * 12, 20)}px`
-                    }}
-                  >
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/20 to-white/0 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
-                  </div>
-
-                  {/* LABEL */}
-                  <div className="mt-3 text-xs font-bold text-center text-gray-700 leading-tight group-hover:text-purple-700 transition-colors duration-300">
-                    {bar.label}
-                  </div>
-
-                  {/* Cases badge on hover */}
-                  <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {bar.value}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-            </div>
-
-            {/* Summary Row */}
-            <div className="mt-8 grid grid-cols-4 gap-2 pt-6 border-t-2 border-gray-200">
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-2 border-l-4 border-green-600">
-                <p className="text-[10px] text-gray-600 font-semibold mb-1">0-10</p>
-                <p className="text-lg font-bold text-green-700">
-                  {resolutionBars[0]?.value || 0}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-2 border-l-4 border-yellow-600">
-                <p className="text-[10px] text-gray-600 font-semibold mb-1">11-20</p>
-                <p className="text-lg font-bold text-yellow-700">
-                  {resolutionBars[1]?.value || 0}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-2 border-l-4 border-orange-600">
-                <p className="text-[10px] text-gray-600 font-semibold mb-1">21-100</p>
-                <p className="text-lg font-bold text-orange-700">
-                  {resolutionBars[2]?.value || 0}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-2 border-l-4 border-red-600">
-                <p className="text-[10px] text-gray-600 font-semibold mb-1">100+</p>
-                <p className="text-lg font-bold text-red-700">
-                  {resolutionBars[3]?.value || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {showResolutionTable && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4">
-              <h3 className="text-white text-lg font-bold">
-                Resolution Time: {resolutionRange}
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="p-4 text-left font-bold">Complaint ID</th>
-                    <th className="p-4 text-left font-bold">Resolution Days</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {resolutionTable.length === 0 && (
-                    <tr>
-                      <td colSpan="2" className="p-8 text-center text-gray-500">
-                        No records found
-                      </td>
-                    </tr>
-                  )}
-
-                  {resolutionTable.map(row => (
-                    <tr key={row.code} className="border-t">
-                      <td className="p-4 font-semibold text-indigo-700">
-                        {row.code}
-                      </td>
-                      <td className="p-4 font-semibold">
-                        {row.days} Days
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-        )}
-
       </div>
     </div>
   );

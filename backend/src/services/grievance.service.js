@@ -6,17 +6,26 @@ import { randomUUID } from "crypto";
 /* ============================================================= */
 
 export const createComplaintService = async (body, documents) => {
-  const code = "CMP-" + randomUUID().slice(0, 8).toUpperCase();
+  let prefix = "CMP-OTH"; // Default
+  const type = body.complaint_type; // ADR, PHYSICAL, QUALITY
+
+  if (type === "ADR") prefix = "CMP-ADR";
+  else if (type === "PHYSICAL") prefix = "CMP-PHY";
+  else if (type === "QUALITY") prefix = "CMP-PQ";
+
+  const uniqueId = randomUUID().slice(0, 8).toUpperCase();
+  const code = `${prefix}-${uniqueId}`;
 
   const sql = `
     INSERT INTO complaints (
       complaint_code, complaint_type, category,
       facility_name, facility_address,
       item_code, item_name,
-      batch_no, warehouse_code,
+      batch_no, warehouse_code, firm_name,
+      opd_slip,
       mfg_date, exp_date, purchase_date, quantity_received,
       affected_quantity, description, documents
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `;
 
   await pool.execute(sql, [
@@ -32,6 +41,8 @@ export const createComplaintService = async (body, documents) => {
 
     body.batch.batchNo,
     body.batch.warehouse_code,
+    body.batch.firm_name,
+    body.opd_slip,
     body.batch.mfg,
     body.batch.exp,
     body.batch.purchase,
@@ -71,6 +82,11 @@ export const dashboardService = async (filters) => {
   if (filters.toDate) {
     sql += " AND DATE(created_at) <= ?";
     params.push(filters.toDate);
+  }
+
+  if (filters.complaintType) {
+    sql += " AND complaint_type = ?";
+    params.push(filters.complaintType);
   }
 
   sql += " ORDER BY created_at DESC";

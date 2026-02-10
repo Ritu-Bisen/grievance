@@ -15,8 +15,8 @@ export default function WarehouseResolveAction() {
   /* ================= LOAD COMPLAINT ================= */
   useEffect(() => {
     api
-  .get(`/grievance/complaint-user/view/${code}`)
-  .then((res) => setComplaint(res.data))
+      .get(`/grievance/complaint-user/view/${code}`)
+      .then((res) => setComplaint(res.data))
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
 
@@ -31,7 +31,7 @@ export default function WarehouseResolveAction() {
       setSubmitting(true);
 
       await api.post(
-  "/grievance/warehouse/resolve",
+        "/grievance/warehouse/resolve",
         {
           complaint_code: code,
           resolution_remark: resolutionRemark
@@ -39,7 +39,7 @@ export default function WarehouseResolveAction() {
       );
 
       alert("Complaint resolved successfully");
-      navigate("/warehouse");
+      navigate(`/warehouse/assessment/view/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Resolve failed");

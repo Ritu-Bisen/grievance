@@ -7,14 +7,14 @@ export default function WarehouseActionRedirect() {
 
   useEffect(() => {
     api.get(
-  `/grievance/complaint-user/view/${code}`
-)
+      `/grievance/complaint-user/view/${code}`
+    )
 
       .then(res => {
         const c = res.data;
 
         if (c.status !== "IN_PROGRESS_WH") {
-          navigate("/warehouse");
+          navigate(`/warehouse/assessment/view/${code}`);
           return;
         }
 

@@ -55,7 +55,10 @@ const upload = multer({
 router.post(
   "/complaint-user/create",
   Auth,
-  upload.array("documents"),
+  upload.fields([
+    { name: "documents", maxCount: 5 },
+    { name: "opd_slip", maxCount: 1 }
+  ]),
   createComplaint
 );
 

@@ -15,8 +15,8 @@ export default function WarehouseDispatchSample() {
   /* ================= LOAD COMPLAINT ================= */
   useEffect(() => {
     api
-  .get(`/grievance/complaint-user/view/${code}`)
-  .then((res) => setComplaint(res.data))
+      .get(`/grievance/complaint-user/view/${code}`)
+      .then((res) => setComplaint(res.data))
 
       .catch(() => alert("Failed to load complaint"));
   }, [code]);
@@ -32,7 +32,7 @@ export default function WarehouseDispatchSample() {
       setSubmitting(true);
 
       await api.post(
-  "/grievance/warehouse/dispatch",
+        "/grievance/warehouse/dispatch",
         {
           complaint_code: code,
           remarks: dispatchRemark
@@ -40,7 +40,7 @@ export default function WarehouseDispatchSample() {
       );
 
       alert("Sample dispatched successfully");
-      navigate("/warehouse");
+      navigate(`/warehouse/assessment/view/${code}`);
 
     } catch (err) {
       alert(err.response?.data?.message || "Dispatch failed");

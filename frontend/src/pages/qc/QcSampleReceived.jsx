@@ -156,10 +156,10 @@ export default function QcSampleReceived() {
 
                             <div className="flex justify-center">
                                 <button
-                                    onClick={() => navigate("/qc/dashboard")}
+                                    onClick={() => navigate(`/qc/assessment-view/${code}`)}
                                     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                                 >
-                                    Back to Dashboard
+                                    Proceed to View Details
                                 </button>
                             </div>
                         </div>

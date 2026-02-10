@@ -4,6 +4,7 @@ import api from "../../services/api";
 import GovHeader from "../../components/GovHeader";
 import ComplaintTopSection from "../../components/ComplaintTopSection";
 import { toast } from "sonner";
+import { FaFileAlt, FaDownload, FaTimes, FaFileUpload, FaEye, FaPaperclip } from "react-icons/fa";
 
 export default function QcResolveView() {
     const { code } = useParams();
@@ -17,6 +18,13 @@ export default function QcResolveView() {
     });
     const [loading, setLoading] = useState(false);
     const [remarks, setRemarks] = useState("");
+    const [file, setFile] = useState(null);
+    const [filePreview, setFilePreview] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
+
+    /* ---------- FILE HELPERS ---------- */
+    const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
+    const isPDF = (name) => /\.pdf$/i.test(name);
 
     /* ---------------- LOAD DATA ---------------- */
 
@@ -40,16 +48,24 @@ export default function QcResolveView() {
 
     const handleResolve = async (e) => {
         e.preventDefault();
+        if (!remarks) return toast.error("Please enter remarks");
+
         setLoading(true);
 
         try {
-            await api.post("/grievance/qc/resolve", {
-                complaint_code: code,
-                remarks: remarks
+            const formData = new FormData();
+            formData.append("complaint_code", code);
+            formData.append("remarks", remarks);
+            if (file) {
+                formData.append("document", file);
+            }
+
+            await api.post("/grievance/qc/resolve", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
             });
 
             toast.success("Complaint resolved and closed successfully");
-            navigate("/qc/dashboard");
+            navigate(`/qc/assessment/view/${code}`);
         } catch (err) {
             setLoading(false);
             toast.error("Failed to resolve complaint");
@@ -93,8 +109,8 @@ export default function QcResolveView() {
                         Warehouse Assessment Details
                     </h3>
                     {warehouse ? (
-                        <div className="p-6 bg-white">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm mb-6">
+                        <div className="p-6 bg-white space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                                 <div className="space-y-3">
                                     <p><b>Assessment Type:</b> {warehouse.assessment_type || 'N/A'}</p>
                                     <p><b>Tender No:</b> {warehouse.tender_no || 'N/A'}</p>
@@ -125,6 +141,61 @@ export default function QcResolveView() {
                                         "{warehouse.remarks || 'No additional remarks.'}"
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* WAREHOUSE DOCUMENTS SECTION */}
+                            <div className="pt-6 border-t">
+                                <h4 className="flex items-center gap-2 text-md font-bold text-gray-800 mb-4">
+                                    <FaFileAlt className="text-blue-500" />
+                                    Assessment Supporting Documents
+                                </h4>
+                                {warehouse.documents?.length > 0 ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        {warehouse.documents.map((doc, index) => {
+                                            const name = typeof doc === "string" ? doc : (doc.original_name || doc.file_name || `Doc ${index + 1}`);
+                                            const path = typeof doc === "string" ? doc : doc.file_name;
+                                            const fullUrl = `http://localhost:5000/uploads/assessment/${path}`;
+                                            const isImg = isImage(name);
+                                            const isPdf = isPDF(name);
+
+                                            return (
+                                                <div
+                                                    key={`wh-doc-${index}`}
+                                                    className="group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition bg-gray-50 flex flex-col"
+                                                >
+                                                    <div
+                                                        onClick={() => setPreviewFile({ name, url: fullUrl })}
+                                                        className="aspect-square bg-gray-200 flex items-center justify-center overflow-hidden relative cursor-pointer"
+                                                    >
+                                                        {isImg ? (
+                                                            <img src={fullUrl} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="thumb" />
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <FaFileAlt className={`text-4xl ${isPdf ? 'text-red-400' : 'text-gray-400'}`} />
+                                                                {isPdf && <span className="text-[10px] font-bold text-red-700">PDF</span>}
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-x-0 bottom-0 bg-black/40 text-white text-[9px] font-bold py-1 translate-y-full group-hover:translate-y-0 transition duration-300 flex items-center justify-center gap-1 backdrop-blur-sm">
+                                                            <FaEye size={10} /> TAP TO PREVIEW
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-2 text-center border-t bg-white">
+                                                        <p className="text-[10px] font-medium text-gray-700 truncate mb-1" title={name}>{name}</p>
+                                                        <a
+                                                            href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${path}`}
+                                                            className="text-blue-600 hover:text-blue-800 transition flex items-center justify-center gap-1 text-[9px] font-bold"
+                                                        >
+                                                            <FaDownload size={10} />
+                                                            DOWNLOAD
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-400 text-xs italic bg-gray-50 p-3 rounded border">No assessment documents uploaded by warehouse.</p>
+                                )}
                             </div>
                         </div>
                     ) : (
@@ -172,15 +243,67 @@ export default function QcResolveView() {
                         <h2 className="text-white text-xl font-bold">Final Resolution Submission</h2>
                     </div>
                     <form onSubmit={handleResolve} className="p-8 space-y-6">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-bold text-gray-700">Final Closing Remarks <span className="text-red-500">*</span></label>
-                            <textarea
-                                value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
-                                className="w-full border-2 border-purple-100 rounded-lg p-4 h-32 focus:ring-4 focus:ring-purple-200 focus:border-purple-600 outline-none transition-all"
-                                placeholder="Enter the final summary and instructions to close this case..."
-                                required
-                            />
+                        <div className="space-y-6 bg-white p-8 rounded-xl border-2 border-purple-100 shadow-sm">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">Final Closing Remarks <span className="text-red-500">*</span></label>
+                                <textarea
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                    className="w-full border-2 border-purple-100 rounded-lg p-4 h-48 focus:ring-4 focus:ring-purple-200 focus:border-purple-600 outline-none transition-all text-lg"
+                                    placeholder="Enter final summary and instructions..."
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">Supporting Document (Optional)</label>
+                                <div className="flex items-center gap-6 bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                                    <input
+                                        type="file"
+                                        id="qc-doc-simple"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const f = e.target.files[0];
+                                            if (f) {
+                                                setFile(f);
+                                                setFilePreview(URL.createObjectURL(f));
+                                            }
+                                        }}
+                                    />
+                                    {!filePreview ? (
+                                        <label
+                                            htmlFor="qc-doc-simple"
+                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-white border-2 border-purple-100 text-purple-700 rounded-xl text-sm font-black uppercase tracking-widest cursor-pointer hover:bg-purple-600 hover:text-white transition-all shadow-sm active:scale-95"
+                                        >
+                                            <FaFileUpload size={18} />
+                                            Select Resolution Image
+                                        </label>
+                                    ) : (
+                                        <div className="flex-1 flex items-center justify-between gap-4 bg-white p-2 pr-6 rounded-xl border-2 border-purple-100 shadow-sm">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-white shadow-md">
+                                                    <img src={filePreview} className="w-full h-full object-cover" alt="Preview" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-purple-700 truncate max-w-[200px]">{file.name}</span>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Image Loaded Successfully</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFile(null);
+                                                    setFilePreview(null);
+                                                }}
+                                                className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <FaTimes size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <button
@@ -197,6 +320,43 @@ export default function QcResolveView() {
                 </div>
 
             </div>
+
+            {/* PREVIEW MODAL */}
+            {previewFile && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800 truncate pr-8">{previewFile.name}</h3>
+                            <button
+                                onClick={() => setPreviewFile(null)}
+                                className="p-2 hover:bg-gray-200 rounded-full transition text-gray-500 hover:text-red-500"
+                            >
+                                <FaTimes size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto p-4 flex justify-center bg-gray-100/50">
+                            {isImage(previewFile.name) ? (
+                                <img src={previewFile.url} alt="Large Preview" className="max-w-full h-auto object-contain rounded shadow-lg" />
+                            ) : isPDF(previewFile.name) ? (
+                                <iframe src={`${previewFile.url}#toolbar=0`} className="w-full h-[70vh] rounded border shadow-inner bg-white" title="PDF Preview" />
+                            ) : (
+                                <div className="p-20 text-center">
+                                    <FaFileAlt className="text-6xl text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500 font-medium">Preview not available for this file type.</p>
+                                    <a
+                                        href={previewFile.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-md"
+                                    >
+                                        Open Original
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

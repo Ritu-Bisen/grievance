@@ -23,6 +23,7 @@ const batches = [
   {
     batchNo: "BATCH001",
     warehouse_code: "WH-001",
+    firm_name: "Generic Pharma Corp",
     mfg: "2024-01-10",
     exp: "2026-01-09",
     purchase: "2024-02-01",
@@ -31,6 +32,7 @@ const batches = [
   {
     batchNo: "BATCH002",
     warehouse_code: "WH-002",
+    firm_name: "LifeCare Solutions Ltd",
     mfg: "2023-12-15",
     exp: "2025-12-14",
     purchase: "2024-01-20",
@@ -101,12 +103,14 @@ export default function ComplaintTypeSelection() {
             icon={FaBoxOpen}
             onClick={() => setSelectedType("PHYSICAL")}
           />
-          <TypeCard
-            title="ADR Reaction"
-            description="Adverse drug reactions or side effects"
-            icon={FaHeartbeat}
-            onClick={() => setSelectedType("ADR")}
-          />
+          {(!JSON.parse(localStorage.getItem("user"))?.role || JSON.parse(localStorage.getItem("user"))?.role !== "WAREHOUSE") && (
+            <TypeCard
+              title="ADR Reaction"
+              description="Adverse drug reactions or side effects"
+              icon={FaHeartbeat}
+              onClick={() => setSelectedType("ADR")}
+            />
+          )}
           <TypeCard
             title="Poor Quality"
             description="Quality issues like contamination or potency"
@@ -190,20 +194,39 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
   const [batchQuery, setBatchQuery] = useState("");
   const [batch, setBatch] = useState(null);
 
+  /* 🔹 AUTO-FILLED DUMMY DATA FOR ASSESSMENT */
+  const autoFilledData = {
+    tender_no: "TN-2024-001",
+    po_no: "PO-889977",
+    stock_warehouse: "1200",
+    stock_facility: "1000",
+    total_stock: "2200"
+  };
+
   const [category, setCategory] = useState("");
   const [qty, setQty] = useState("");
   const [description, setDescription] = useState("");
   const [documents, setDocuments] = useState([]);
-  useEffect(() => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const [opdSlip, setOpdSlip] = useState(null);
 
-  if (user?.facility_name && user?.facility_address) {
-    setFacility({
-      name: user.facility_name,
-      address: user.facility_address,
-    });
-  }
-}, []);
+  /* 🔹 WAREHOUSE ASSESSMENT STATE */
+  const [sameComplaint, setSameComplaint] = useState("");
+  const [qualityDescription, setQualityDescription] = useState("");
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (user?.facility_name && user?.facility_address) {
+      setFacility({
+        name: user.facility_name,
+        address: user.facility_address,
+      });
+    } else if (user?.role === "WAREHOUSE" && user?.warehouse_code) {
+      setFacility({
+        name: `WAREHOUSE: ${user.warehouse_code}`,
+        address: "Warehouse Initiated",
+      });
+    }
+  }, []);
 
   const itemResults = items.filter(i =>
     i.code.toLowerCase().includes(itemCodeQuery.toLowerCase())
@@ -213,37 +236,39 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
     b.batchNo.toLowerCase().includes(batchQuery.toLowerCase())
   );
 
- const handleFileChange = (e) => {
-  const newFiles = Array.from(e.target.files);
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files);
 
-  // combine old + new files
-  const combinedFiles = [...documents, ...newFiles];
+    // combine old + new files
+    const combinedFiles = [...documents, ...newFiles];
 
-  if (combinedFiles.length > 5) {
-    alert("You can upload a maximum of 5 documents only");
-    e.target.value = "";
-    return;
-  }
+    if (combinedFiles.length > 5) {
+      alert("You can upload a maximum of 5 documents only");
+      e.target.value = "";
+      return;
+    }
 
-  setDocuments(combinedFiles);
-  e.target.value = ""; // allow re-selecting same file again
-};
+    setDocuments(combinedFiles);
+    e.target.value = ""; // allow re-selecting same file again
+  };
 
-
-
+  const removeDocument = (index) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async () => {
     try {
       if (
-        !facility ||
+        (!facility && JSON.parse(localStorage.getItem("user"))?.role !== "WAREHOUSE") ||
         !item ||
         !batch ||
         !category ||
         !qty ||
         !description.trim() ||
-        documents.length === 0
+        documents.length === 0 ||
+        (complaintType === "ADR" && !opdSlip)
       ) {
-        alert("Please fill all mandatory fields");
+        alert(complaintType === "ADR" ? "Please fill all mandatory fields including OPD Slip" : "Please fill all mandatory fields");
         return;
       }
 
@@ -265,10 +290,29 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
         formData.append("documents", file);
       });
 
-     const res = await api.post(
-  "/grievance/complaint-user/create",
-  formData
-);
+      if (opdSlip) {
+        formData.append("opd_slip", opdSlip);
+      }
+
+      // 🔥 WAREHOUSE INTEGRATED ASSESSMENT DATA
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (user?.role === "WAREHOUSE") {
+        formData.append("tender_no", autoFilledData.tender_no);
+        formData.append("po_no", autoFilledData.po_no);
+        formData.append("stock_warehouse", autoFilledData.stock_warehouse);
+        formData.append("stock_facility", autoFilledData.stock_facility);
+        formData.append("total_stock", autoFilledData.total_stock);
+        formData.append("same_complaint_present", sameComplaint);
+
+        if (complaintType === "QUALITY") {
+          formData.append("quality_description", qualityDescription);
+        }
+      }
+
+      const res = await api.post(
+        "/grievance/complaint-user/create",
+        formData
+      );
 
 
 
@@ -276,7 +320,11 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
       alert("Complaint submitted successfully");
 
       // ✅ ONLY CHANGE
-      navigate("/complaint/dashboard");
+      if (JSON.parse(localStorage.getItem("user"))?.role === "WAREHOUSE") {
+        navigate("/warehouse");
+      } else {
+        navigate("/complaint/dashboard");
+      }
 
     } catch (err) {
       console.error(err);
@@ -290,17 +338,19 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
       <div className="p-6 space-y-6">
 
-      <Section title="Facility Details">
-  <ReadOnlyInput
-    label="Facility Name *"
-    value={facility?.name || ""}
-  />
+        {JSON.parse(localStorage.getItem("user"))?.role !== "WAREHOUSE" && (
+          <Section title="Facility Details">
+            <ReadOnlyInput
+              label="Facility Name *"
+              value={facility?.name || ""}
+            />
 
-  <ReadOnlyInput
-    label="Facility Address *"
-    value={facility?.address || ""}
-  />
-</Section>
+            <ReadOnlyInput
+              label="Facility Address *"
+              value={facility?.address || ""}
+            />
+          </Section>
+        )}
 
 
         <Section title="Item Details">
@@ -337,6 +387,7 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
             }}
           />
           <ReadOnlyInput label="Warehouse Batch No" value={batch?.warehouse_code || ""} />
+          <ReadOnlyInput label="Supplying Firm Name" value={batch?.firm_name || ""} />
         </Section>
 
         <Section title="Date Information">
@@ -377,7 +428,7 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
         <Section title="Complaint Description">
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Description / Remarks *</label>
+            <label className="block text-sm mb-1 font-semibold text-gray-700">Details of complaint *</label>
             <textarea
               rows="4"
               value={description}
@@ -387,61 +438,179 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
           </div>
         </Section>
 
-        <Section title="Upload Supporting Documents">
-  <div className="flex items-center gap-3 flex-wrap">
-    <input
-      type="file"
-      multiple
-      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-      onChange={handleFileChange}
-      className="
-        file:bg-orange-500
-        file:text-white
-        file:px-3
-        file:py-1
-        file:rounded
-        file:border-0
-        hover:file:bg-orange-600
-        cursor-pointer
-      "
-    />
+        {/* 🔥 WAREHOUSE INTEGRATED ASSESSMENT FORM */}
+        {
+          JSON.parse(localStorage.getItem("user"))?.role === "WAREHOUSE" && (
+            <div className="border border-green-200 rounded p-4 bg-green-50 mb-6">
+              <h3 className="text-lg font-bold text-green-900 mb-4 border-b border-green-200 pb-2">
+                Perform Assessment
+              </h3>
 
-    {/* ✅ SMALL FILE THUMBNAILS (NEAR BUTTON) */}
-    {documents.length > 0 && (
-      <div className="flex gap-2 flex-wrap">
-        {documents.map((file, index) => {
-          const isImage = file.type.startsWith("image/");
+              {/* AUTO-FILLED ROW 1 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Tender No. (Auto)</label>
+                  <input disabled value={autoFilledData.tender_no} className="w-full px-3 py-2 bg-white rounded border border-green-300 text-gray-500" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">PO No. (Auto)</label>
+                  <input disabled value={autoFilledData.po_no} className="w-full px-3 py-2 bg-white rounded border border-green-300 text-gray-500" />
+                </div>
+              </div>
 
-          return (
-            <div
-              key={index}
-              className="w-12 border rounded p-0.5 bg-gray-50 text-center"
-            >
-              {isImage ? (
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={file.name}
-                  className="w-full h-10 object-cover rounded"
-                />
-              ) : (
-                <div className="h-10 flex items-center justify-center text-lg">
-                  📄
+              {/* AUTO-FILLED ROW 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Stock @ Warehouse</label>
+                  <input disabled value={autoFilledData.stock_warehouse} className="w-full px-3 py-2 bg-white rounded border border-green-300 text-gray-500" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Stock @ Facility</label>
+                  <input disabled value={autoFilledData.stock_facility} className="w-full px-3 py-2 bg-white rounded border border-green-300 text-gray-500" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Total Stock</label>
+                  <input disabled value={autoFilledData.total_stock} className="w-full px-3 py-2 bg-white rounded border border-green-300 text-gray-500" />
+                </div>
+              </div>
+
+              {/* SAME COMPLAINT PRESENT */}
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  Is the same complaint present at warehouse? *
+                </label>
+                <select
+                  value={sameComplaint}
+                  onChange={(e) => setSameComplaint(e.target.value)}
+                  className="w-full px-3 py-2 border rounded border-green-500 focus:ring-2 focus:ring-green-300 outline-none"
+                >
+                  <option value="">Select Option</option>
+                  <option value="YES">Yes</option>
+                  <option value="NO">No</option>
+                </select>
+              </div>
+
+              {/* QUALITY DESCRIPTION (ONLY FOR QUALITY) */}
+              {complaintType === "QUALITY" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-gray-800 mb-1">
+                    Description of Poor Quality *
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={qualityDescription}
+                    onChange={(e) => setQualityDescription(e.target.value)}
+                    className="w-full px-3 py-2 border rounded border-green-500 focus:ring-2 focus:ring-green-300 outline-none"
+                    placeholder="Describe the quality issue observed..."
+                  />
                 </div>
               )}
 
-              <p
-                className="text-[9px] truncate mt-1"
-                title={file.name}
-              >
-                {file.name}
+              <p className="text-xs text-green-700 italic">
+                * Assessment data will be submitted along with the complaint.
               </p>
             </div>
-          );
-        })}
-      </div>
-    )}
-  </div>
-</Section>
+          )
+        }
+
+        <Section title="Upload Supporting Documents">
+          <div className="space-y-3">
+            <div className="flex items-center gap-4">
+              <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                <span>Upload Documents</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-xs text-gray-500 italic">Max 5 files (Images, PDF, Doc)</span>
+            </div>
+
+            {/* ✅ SMALL FILE THUMBNAILS (NEAR BUTTON) */}
+            {documents.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {documents.map((file, index) => {
+                  const isImage = file.type.startsWith("image/");
+
+                  return (
+                    <div
+                      key={index}
+                      className="w-16 border rounded p-1 bg-gray-50 text-center relative group"
+                    >
+                      {/* Removal Button */}
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md hover:bg-red-600 transition-colors z-10"
+                        title="Remove file"
+                      >
+                        ✕
+                      </button>
+
+                      {isImage ? (
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="w-full h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-12 flex items-center justify-center text-xl">
+                          📄
+                        </div>
+                      )}
+
+                      <p
+                        className="text-[9px] truncate mt-1 text-gray-600 font-medium"
+                        title={file.name}
+                      >
+                        {file.name}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Section>
+
+        {
+          complaintType === "ADR" && (
+            <Section title="ADR Specific Documents">
+              <div className="space-y-3 p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                <label className="block text-sm font-bold text-orange-800 mb-1">
+                  Upload Patient OPD Slip (PDF) *
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                    <span>{opdSlip ? "Change OPD Slip" : "Upload OPD Slip"}</span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setOpdSlip(e.target.files[0])}
+                      className="hidden"
+                    />
+                  </label>
+                  {opdSlip && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <span className="text-xl">📄</span>
+                      <span className="font-medium truncate max-w-[200px]">{opdSlip.name}</span>
+                      <button
+                        onClick={() => setOpdSlip(null)}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-orange-600">This document is mandatory for Adverse Drug Reaction complaints.</p>
+              </div>
+            </Section>
+          )
+        }
 
 
         <div className="text-right">
@@ -452,8 +621,8 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
             Submit Complaint
           </button>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
 
@@ -470,13 +639,11 @@ function Section({ title, children }) {
 
 function ReadOnlyInput({ label, value }) {
   return (
-    <div>
-      <label className="block text-sm mb-1">{label}</label>
-      <input
-        disabled
-        value={value}
-        className="border px-3 py-2 w-full rounded bg-gray-100"
-      />
+    <div className="space-y-1">
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight">{label}</label>
+      <div className="border border-blue-100 px-4 py-2.5 w-full rounded-lg bg-blue-50/50 text-blue-900 font-medium italic shadow-sm">
+        {value || <span className="text-gray-400 font-normal">N/A</span>}
+      </div>
     </div>
   );
 }
