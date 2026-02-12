@@ -541,7 +541,7 @@ export default function QcAssessmentView() {
                                     <FaExclamationTriangle className="text-xl" />
                                     <div>
                                         <p className="font-bold">Physical Inspection Required</p>
-                                        <p className="text-sm">This is a physical complaint. Please review the details. No sample tracking is available for this case.</p>
+                                        <p className="text-sm">This is a physical complaint. Please review the details. No sample tracking is available for this complaint.</p>
                                     </div>
                                 </div>
                             ) : complaint.status === "SAMPLE_DISPATCHED_WH" ? (
@@ -766,7 +766,7 @@ export default function QcAssessmentView() {
                                 </div>
                                 <div className="p-6 space-y-6">
                                     {pendingAction === 'RECEIVE' && (
-                                        <p className="text-gray-600 font-medium">You are acknowledging the receipt of the physical sample for this complaint. This will transition the case to the technical analysis stage.</p>
+                                        <p className="text-gray-600 font-medium">You are acknowledging the receipt of the physical sample for this complaint. This will transition the complaint to the technical analysis stage.</p>
                                     )}
 
                                     {pendingAction === 'REPORT' && (

@@ -100,6 +100,17 @@ export const adminDashboard = async (req, res) => {
       counts[row.status] = row.total;
     });
 
+    /* ================= TYPE COUNTS ================= */
+    const [typeRows] = await pool.execute(`
+      SELECT complaint_type, COUNT(*) AS total
+      FROM complaints
+      GROUP BY complaint_type
+    `);
+
+    typeRows.forEach(row => {
+      counts[row.complaint_type] = row.total;
+    });
+
     /* ================= PARENT TOTALS ================= */
 
     counts.SAMPLE_DISPATCHED_TOTAL =
@@ -184,10 +195,18 @@ export const adminReportView = async (req, res) => {
 
     const qcAssessment = qcRows.length > 0 ? qcRows[0] : null;
 
+    /* ================= COMPLAINT REPORT (QC REPORT) ================= */
+    const [reportRows] = await pool.execute(
+      "SELECT * FROM complaint_reports WHERE complaint_code = ?",
+      [complaintCode]
+    );
+    const report = reportRows.length > 0 ? reportRows[0] : null;
+
     res.json({
       complaint,
       warehouseAssessment,
-      qcAssessment
+      qcAssessment,
+      report
     });
 
   } catch (err) {
@@ -255,7 +274,8 @@ export const avgHandlingTime = async (req, res) => {
 
       // FACILITY
       const f = get("SUBMITTED", "SAMPLE_DISPATCHED_FACILITY");
-      if (f !== null) facility.push({ code, days: f, start_date: startDate, end_date: endDate });
+      const displayF = f === 0 ? 1 : f;
+      if (f !== null) facility.push({ code, days: displayF, start_date: startDate, end_date: endDate });
 
       // WAREHOUSE
       let wEnd = logs.some(l => l.status === "RESOLVED")
@@ -263,11 +283,16 @@ export const avgHandlingTime = async (req, res) => {
         : "SAMPLE_DISPATCHED_WH";
 
       const w = get("SAMPLE_DISPATCHED_FACILITY", wEnd);
-      if (w !== null) warehouse.push({ code, days: w, start_date: startDate, end_date: endDate });
+      const displayW = w === 0 ? 1 : w;
+      if (w !== null) warehouse.push({ code, days: displayW, start_date: startDate, end_date: endDate });
 
       // QC
+      const qcStartLog = logs.find(l => l.status === "SAMPLE_DISPATCHED_WH");
+      const qcEndLog = logs.find(l => l.status === "RESOLVED");
       const q = get("SAMPLE_DISPATCHED_WH", "RESOLVED");
-      if (q !== null) qc.push({ code, days: q, start_date: startDate, end_date: endDate });
+      const displayQ = q === 0 ? 1 : q;
+      const qcEndDate = qcEndLog ? qcEndLog.changed_at : (qcStartLog ? new Date() : endDate);
+      if (q !== null) qc.push({ code, days: displayQ, start_date: startDate, end_date: qcEndDate });
     }
 
     const avg = arr =>
@@ -320,10 +345,13 @@ export const resolutionTimeGraph = async (req, res) => {
 
     rows.forEach(r => {
       const d = r.days ?? 0;
+      const displayDays = d === 0 ? 1 : d;
 
       const entry = {
         code: r.complaint_code,
-        days: d
+        created_at: r.created_at,
+        resolved_at: r.resolved_at || r.rejected_at,
+        days: displayDays
       };
 
       if (d <= 10) buckets["0_10"].push(entry);

@@ -28,6 +28,13 @@ export default function WarehouseAssessmentView() {
   const [resolutionRemark, setResolutionRemark] = useState("");
   const [dispatchRemark, setDispatchRemark] = useState("");
 
+  /* 📦 PHYSICAL ASSESSMENT STATES */
+  const [stockWarehouse, setStockWarehouse] = useState("1200");
+  const [stockFacility, setStockFacility] = useState("1000");
+  const [totalStock, setTotalStock] = useState("500");
+  const [tenderNo, setTenderNo] = useState("");
+  const [poNo, setPoNo] = useState("");
+
   /* 🧐 REVIEW WORKFLOW STATE */
   const [reviewMode, setReviewMode] = useState(false);
   const [pendingAction, setPendingAction] = useState(null); // RECEIVE, APPROVE, REJECT, ASSESS, RESOLVE, DISPATCH
@@ -35,6 +42,7 @@ export default function WarehouseAssessmentView() {
 
   /* 📄 PDF STATE */
   const [loadingPDF, setLoadingPDF] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   const loadData = () => {
     api
@@ -50,6 +58,19 @@ export default function WarehouseAssessmentView() {
   useEffect(() => {
     loadData();
   }, [code]);
+
+  useEffect(() => {
+    if (complaint) {
+      setTenderNo(complaint.tender_no || "TN-2024-001");
+      setPoNo(complaint.po_no || "PO-889977");
+    }
+  }, [complaint]);
+
+  const calculateTotalStock = (wh, fac) => {
+    const w = parseFloat(wh) || 0;
+    const f = parseFloat(fac) || 0;
+    setTotalStock(w + f);
+  };
 
   /* ---------- PDF DOWNLOAD ---------- */
   const imageUrlToBase64 = async (url) => {
@@ -70,6 +91,7 @@ export default function WarehouseAssessmentView() {
   };
 
   const downloadPDF = async () => {
+    setShowDownloadMenu(false);
     try {
       setLoadingPDF(true);
       const doc = new jsPDF();
@@ -355,12 +377,19 @@ export default function WarehouseAssessmentView() {
     formData.append("item_code", complaint.item_code);
     formData.append("batch_no", complaint.batch_no);
 
-    // Dummy data
-    formData.append("tender_no", "TN-AUTO-001");
-    formData.append("po_no", "PO-AUTO-001");
-    formData.append("stock_warehouse", "100");
-    formData.append("stock_facility", "100");
-    formData.append("total_stock", "200");
+    if (complaint.complaint_type === "PHYSICAL") {
+      formData.append("tender_no", tenderNo);
+      formData.append("po_no", poNo);
+      formData.append("stock_warehouse", stockWarehouse);
+      formData.append("stock_facility", stockFacility);
+      formData.append("total_stock", totalStock);
+    } else {
+      formData.append("tender_no", tenderNo);
+      formData.append("po_no", poNo);
+      formData.append("stock_warehouse", "100");
+      formData.append("stock_facility", "100");
+      formData.append("total_stock", "200");
+    }
 
     formData.append("same_complaint_present", sameComplaint);
     if (remarks) formData.append("remarks", remarks);
@@ -420,10 +449,7 @@ export default function WarehouseAssessmentView() {
 
   /* ================= CSV DOWNLOAD ================= */
   const downloadCSV = () => {
-
-    // ✅ allow CSV for rejected also
-    if (!assessment && complaint.status !== "REJECTED_WH") return;
-
+    setShowDownloadMenu(false);
     const complaintRows = [
       ["COMPLAINT", "Complaint Code", complaint.complaint_code],
       ["COMPLAINT", "Type", complaint.complaint_type],
@@ -435,13 +461,24 @@ export default function WarehouseAssessmentView() {
       ["COMPLAINT", "Status", complaint.status],
     ];
 
+    const formatDateCSV = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      // ✅ Adding a leading space to force Excel to treat this as text and avoid "########"
+      return ` ${day}-${month}-${year} ${hours}:${minutes}`;
+    };
 
-    /* ✅ Created & Resolved dates (CSV FIX) */
     if (complaint.created_at) {
       complaintRows.push([
         "COMPLAINT",
         "Created On",
-        new Date(complaint.created_at).toLocaleString()
+        formatDateCSV(complaint.created_at)
       ]);
     }
 
@@ -449,7 +486,7 @@ export default function WarehouseAssessmentView() {
       complaintRows.push([
         "COMPLAINT",
         "Resolved On",
-        new Date(complaint.resolved_at).toLocaleString()
+        formatDateCSV(complaint.resolved_at)
       ]);
     }
 
@@ -494,7 +531,7 @@ export default function WarehouseAssessmentView() {
         complaintRows.push([
           "COMPLAINT",
           "Rejected On",
-          new Date(complaint.rejected_at).toLocaleString()
+          formatDateCSV(complaint.rejected_at)
         ]);
       }
 
@@ -686,31 +723,33 @@ export default function WarehouseAssessmentView() {
           </button>
 
           {/* DOWNLOAD BUTTONS */}
-          <div className="flex items-center gap-3">
+          <div className="relative">
             <button
-              onClick={downloadPDF}
-              disabled={loadingPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              {loadingPDF ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Generating...</span>
-                </>
-              ) : (
-                <>
-                  <FaDownload />
-                  <span>Download PDF</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={downloadCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5"
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition shadow-md"
             >
               <FaDownload />
-              <span>Download CSV</span>
+              <span>Download Report</span>
             </button>
+
+            {showDownloadMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                <button
+                  onClick={downloadCSV}
+                  className="w-full text-left px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <span className="text-green-600">CSV</span> Download
+                </button>
+                <div className="h-px bg-gray-100 mx-2"></div>
+                <button
+                  onClick={downloadPDF}
+                  disabled={loadingPDF}
+                  className="w-full text-left px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <span className="text-red-500">PDF</span> {loadingPDF ? "Generating..." : "Download"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -741,7 +780,13 @@ export default function WarehouseAssessmentView() {
             "Item": complaint.item_name,
             "Item Code": complaint.item_code,
             "Batch No": complaint.batch_no,
-            "Warehouse Batch": complaint.warehouse_code || "—",
+            "Warehouse Batch": (() => {
+              const warehouseNames = {
+                "WH-001": "Ambikapur Warehouse",
+                "WH-002": "Dantewada Warehouse"
+              };
+              return warehouseNames[complaint.warehouse_code] || complaint.warehouse_code || "—";
+            })(),
             "Firm Name": complaint.firm_name || "—",
             "Mfg Date": complaint.mfg_date ? new Date(complaint.mfg_date).toLocaleDateString() : "—",
             "Exp Date": complaint.exp_date ? new Date(complaint.exp_date).toLocaleDateString() : "—",
@@ -1041,93 +1086,164 @@ export default function WarehouseAssessmentView() {
                     </div>
                   )}
 
-                  {/* STEP 3: ASSESSMENT FORM (If Approved but not assessed) - Skipped for PHYSICAL */}
-                  {complaint.status === "IN_PROGRESS_WH" && !assessment && complaint.complaint_type !== "PHYSICAL" && (
+                  {/* STEP 3: ASSESSMENT FORM (If Approved but not assessed) */}
+                  {complaint.status === "IN_PROGRESS_WH" && !assessment && (
                     <div className="space-y-6">
                       <div className="flex items-center gap-2 border-b pb-3">
                         <FaExclamationTriangle className="text-orange-500" />
                         <h4 className="font-bold text-gray-800 tracking-tight">Perform {complaint.complaint_type} Assessment</h4>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {complaint.complaint_type === "PHYSICAL" ? (
+                        /* PHYSICAL ASSESSMENT FORM (FROM IMAGE) */
+                        <div className="space-y-6">
+                          <h4 className="text-gray-700 font-bold border-l-4 border-orange-500 pl-3">Warehouse Assessment Form – Physical Damage</h4>
 
-                        {/* AUTO-FILLED FIELDS */}
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200 mb-2">
-                          <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Tender No. (Auto)</label>
-                            <input disabled value="TN-AUTO-001" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PO No. (Auto)</label>
-                            <input disabled value="PO-AUTO-001" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tender No. (Auto-filled)</label>
+                              <input
+                                value={tenderNo}
+                                readOnly
+                                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg text-gray-600 text-sm font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">PO No. (Auto-filled)</label>
+                              <input
+                                value={poNo}
+                                readOnly
+                                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg text-gray-600 text-sm font-medium"
+                              />
+                            </div>
                           </div>
 
-                          <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Stock @ Warehouse</label>
-                            <input disabled value="100" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Physical Stock at Warehouse</label>
+                              <input
+                                type="number"
+                                value={stockWarehouse}
+                                readOnly
+                                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg text-gray-600 text-sm font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Physical Stock at Complaint Facility</label>
+                              <input
+                                type="number"
+                                value={stockFacility}
+                                readOnly
+                                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg text-gray-600 text-sm font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Total Stock Intended at Facility</label>
+                              <input
+                                type="number"
+                                value={totalStock}
+                                readOnly
+                                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg text-gray-600 text-sm font-bold"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Stock @ Facility</label>
-                            <input disabled value="100" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Total Stock</label>
-                            <input disabled value="200" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Same complaint present at warehouse? *</label>
-                          <select
-                            value={sameComplaint}
-                            onChange={(e) => setSameComplaint(e.target.value)}
-                            className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
-                          >
-                            <option value="">Select...</option>
-                            <option value="YES">Yes</option>
-                            <option value="NO">No</option>
-                          </select>
-                        </div>
 
-                        {complaint.complaint_type === "ADR" && (
                           <div className="space-y-1">
-                            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Severity of Adverse Reaction *</label>
+                            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Check if same complaint is present at warehouse *</label>
                             <select
-                              value={adrSeverity}
-                              onChange={(e) => setAdrSeverity(e.target.value)}
-                              className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
+                              value={sameComplaint}
+                              onChange={(e) => setSameComplaint(e.target.value)}
+                              className="w-full border-2 border-gray-100 px-4 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
                             >
                               <option value="">Select...</option>
-                              <option value="MILD">Mild</option>
-                              <option value="MODERATE">Moderate</option>
-                              <option value="SEVERE">Severe</option>
+                              <option value="YES">Yes</option>
+                              <option value="NO">No</option>
                             </select>
                           </div>
-                        )}
-                      </div>
-
-                      {complaint.complaint_type === "ADR" && (
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Detailed Assessment Remarks *</label>
-                          <textarea
-                            rows="3"
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                            className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
-                            placeholder="Provide details of the clinical assessment..."
-                          />
                         </div>
-                      )}
+                      ) : (
+                        <div className="space-y-6">
+                          {/* AUTO-FILLED FIELDS */}
+                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200 mb-2">
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Tender No. (Auto)</label>
+                              <input disabled value={tenderNo} className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PO No. (Auto)</label>
+                              <input disabled value={poNo} className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                            </div>
 
-                      {complaint.complaint_type === "QUALITY" && (
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Quality Issue Description *</label>
-                          <textarea
-                            rows="3"
-                            value={qualityDescription}
-                            onChange={(e) => setQualityDescription(e.target.value)}
-                            className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
-                            placeholder="Describe the physical/chemical quality issues observed..."
-                          />
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Stock @ Warehouse</label>
+                              <input disabled value="100" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Stock @ Facility</label>
+                              <input disabled value="100" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Total Stock</label>
+                              <input disabled value="200" className="w-full bg-white border border-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Same complaint present at warehouse? *</label>
+                              <select
+                                value={sameComplaint}
+                                onChange={(e) => setSameComplaint(e.target.value)}
+                                className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
+                              >
+                                <option value="">Select...</option>
+                                <option value="YES">Yes</option>
+                                <option value="NO">No</option>
+                              </select>
+                            </div>
+
+                            {complaint.complaint_type === "ADR" && (
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Severity of Adverse Reaction *</label>
+                                <select
+                                  value={adrSeverity}
+                                  onChange={(e) => setAdrSeverity(e.target.value)}
+                                  className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
+                                >
+                                  <option value="">Select...</option>
+                                  <option value="MILD">Mild</option>
+                                  <option value="MODERATE">Moderate</option>
+                                  <option value="SEVERE">Severe</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+
+                          {complaint.complaint_type === "ADR" && (
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Detailed Assessment Remarks *</label>
+                              <textarea
+                                rows="3"
+                                value={remarks}
+                                onChange={(e) => setRemarks(e.target.value)}
+                                className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
+                                placeholder="Provide details of the clinical assessment..."
+                              />
+                            </div>
+                          )}
+
+                          {complaint.complaint_type === "QUALITY" && (
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Quality Issue Description *</label>
+                              <textarea
+                                rows="3"
+                                value={qualityDescription}
+                                onChange={(e) => setQualityDescription(e.target.value)}
+                                className="w-full border-2 border-gray-100 px-3 py-2.5 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition outline-none text-sm font-medium"
+                                placeholder="Describe the physical/chemical quality issues observed..."
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1160,18 +1276,20 @@ export default function WarehouseAssessmentView() {
                           disabled={submitting}
                           className="bg-indigo-600 text-white px-12 py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-200 disabled:opacity-50"
                         >
-                          {submitting ? "Submitting..." : "Submit Formal Assessment"}
+                          {submitting ? (complaint.complaint_type === "PHYSICAL" ? "Processing..." : "Submitting...") : (complaint.complaint_type === "PHYSICAL" ? "Proceed" : "Submit Formal Assessment")}
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* STEP 4: FINAL DECISION (If assessed but not closed) OR (SUBMITTED_WH) OR (IN_PROGRESS_WH + PHYSICAL) */}
-                  {((complaint.status === "IN_PROGRESS_WH" && (assessment || complaint.complaint_type === "PHYSICAL")) || (complaint.status === "SUBMITTED_WH") || (complaint.status === "SUBMITTED" && isWarehouseComplaint)) && (
+                  {/* STEP 4: FINAL DECISION (If assessed but not closed) */}
+                  {((complaint.status === "IN_PROGRESS_WH" && assessment) || (complaint.status === "SUBMITTED_WH") || (complaint.status === "SUBMITTED" && isWarehouseComplaint)) && (
                     <div className="space-y-6 bg-orange-50/30 p-6 rounded-xl border border-orange-100">
                       <div className="flex items-center gap-2 border-b border-orange-100 pb-3">
                         <FaWarehouse className="text-orange-600" />
-                        <h4 className="font-bold text-orange-900 tracking-tight text-lg">Resolve Complaint or Escalate to QC</h4>
+                        <h4 className="font-bold text-orange-900 tracking-tight text-lg">
+                          {complaint.complaint_type === "PHYSICAL" ? "Resolve Complaint or Escalate to QC" : "Dispatch Sample to QC Lab"}
+                        </h4>
                       </div>
 
                       {complaint.complaint_type === "PHYSICAL" ? (
@@ -1216,7 +1334,7 @@ export default function WarehouseAssessmentView() {
                               disabled={submitting}
                               className="bg-orange-600 text-white px-12 py-3.5 rounded-xl font-bold hover:bg-orange-700 transition shadow-lg hover:shadow-orange-200 disabled:opacity-50"
                             >
-                              {submitting ? "Processing..." : "Forward to QC Lab"}
+                              {submitting ? "Processing..." : "Dispatch to QC Lab"}
                             </button>
                           </div>
                         </div>

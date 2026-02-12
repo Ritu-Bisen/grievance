@@ -14,7 +14,8 @@ import {
   FaCheckCircle,
   FaUserCheck,
   FaFileAlt,
-  FaArrowLeft
+  FaArrowLeft,
+  FaClock
 } from "react-icons/fa";
 
 export default function AdminReportView() {
@@ -24,10 +25,15 @@ export default function AdminReportView() {
   const [complaint, setComplaint] = useState(null);
   const [warehouseAssessment, setWarehouseAssessment] = useState(null);
   const [qcAssessment, setQcAssessment] = useState(null);
+  const [report, setReport] = useState(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   /* 🔍 PREVIEW STATE */
   const [previewFile, setPreviewFile] = useState(null);
+
+  /* ---------- FILE HELPERS ---------- */
+  const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
+  const isPDF = (name) => /\.pdf$/i.test(name);
 
   useEffect(() => {
     api
@@ -36,15 +42,12 @@ export default function AdminReportView() {
         setComplaint(res.data.complaint);
         setWarehouseAssessment(res.data.warehouseAssessment);
         setQcAssessment(res.data.qcAssessment);
+        setReport(res.data.report);
       })
       .catch(() => alert("Failed to load report"));
   }, [code]);
 
   if (!complaint) return null;
-
-  /* ================= FILE HELPERS ================= */
-  const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
-  const isPDF = (name) => /\.pdf$/i.test(name);
 
   /* ================= CSV DOWNLOAD ================= */
   const downloadCSV = () => {
@@ -60,14 +63,34 @@ export default function AdminReportView() {
       ["COMPLAINT", "Item Name", complaint.item_name],
       ["COMPLAINT", "Item Code", complaint.item_code],
       ["COMPLAINT", "Batch No", complaint.batch_no],
-      ["COMPLAINT", "Warehouse Code", complaint.warehouse_code],
+      ["COMPLAINT", "Warehouse Code", (() => {
+        const warehouseNames = {
+          "WH-001": "Ambikapur Warehouse",
+          "WH-002": "Dantewada Warehouse"
+        };
+        return warehouseNames[complaint.warehouse_code] || complaint.warehouse_code || "-";
+      })()],
     ];
+
+    // ✅ Standardized Date Formatter (CSV FIX)
+    const formatDateCSV = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      // ✅ Adding a leading space to force Excel to treat this as text and avoid "########"
+      return ` ${day}-${month}-${year} ${hours}:${minutes}`;
+    };
 
     if (complaint.created_at) {
       rows.push([
         "COMPLAINT",
         "Created On",
-        new Date(complaint.created_at).toLocaleString()
+        formatDateCSV(complaint.created_at)
       ]);
     }
 
@@ -75,7 +98,7 @@ export default function AdminReportView() {
       rows.push([
         "COMPLAINT",
         "Resolved On",
-        new Date(complaint.resolved_at).toLocaleString()
+        formatDateCSV(complaint.resolved_at)
       ]);
     }
 
@@ -83,7 +106,7 @@ export default function AdminReportView() {
       rows.push([
         "COMPLAINT",
         "Rejected On",
-        new Date(complaint.rejected_at).toLocaleString()
+        formatDateCSV(complaint.rejected_at)
       ]);
     }
 
@@ -123,6 +146,24 @@ export default function AdminReportView() {
     a.download = `admin_report_${complaint.complaint_code}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  /* ================= DOWNLOAD HELPER (FIX) ================= */
+  const handleDownloadPdf = (pdfPath) => {
+    // Determine if it's already a full URL or needs a base
+    const fullUrl = pdfPath.startsWith('http')
+      ? pdfPath
+      : `http://localhost:5000/uploads/reports/${pdfPath}`;
+
+    // Use the backend proxy for downloads to ensure headers are set correctly
+    const proxyUrl = `http://localhost:5000/api/grievance/qc/download-pdf?url=${encodeURIComponent(fullUrl)}`;
+
+    const link = document.createElement('a');
+    link.href = proxyUrl;
+    link.download = 'qc_report.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   /* ================= PDF DOWNLOAD ================= */
@@ -214,7 +255,13 @@ export default function AdminReportView() {
       ["Item Name", complaint.item_name],
       ["Item Code", complaint.item_code],
       ["Batch No", complaint.batch_no],
-      ["Warehouse Code", complaint.warehouse_code],
+      ["Warehouse Code", (() => {
+        const warehouseNames = {
+          "WH-001": "Ambikapur Warehouse",
+          "WH-002": "Dantewada Warehouse"
+        };
+        return warehouseNames[complaint.warehouse_code] || complaint.warehouse_code || "-";
+      })()],
       ["Created On", new Date(complaint.created_at).toLocaleString()],
     ];
 
@@ -572,6 +619,78 @@ export default function AdminReportView() {
               )}
             </div>
           )}
+
+        {/* ================= REPORT SECTION (ALIGNED WITH QC VIEW) ================= */}
+        {report ? (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-indigo-700 flex items-center gap-2">
+                <FaFileAlt /> QC Analysis Report
+              </h3>
+              {report.received_at && (
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100 flex items-center gap-1">
+                  <FaClock className="text-amber-500" /> Received: {new Date(report.received_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Report Summary */}
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Report Summary:</label>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 italic">
+                  {report.report_description ? `"${report.report_description}"` : "No summary provided."}
+                </div>
+              </div>
+
+              {/* Report Document */}
+              {report.report_pdf && (
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider">Report Document:</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const url = report.report_pdf.startsWith('http')
+                            ? report.report_pdf
+                            : `http://localhost:5000/uploads/reports/${report.report_pdf}`;
+                          setPreviewFile({ name: "Analytical_Report.pdf", url });
+                        }}
+                        className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <FaEye /> Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadPdf(report.report_pdf)}
+                        className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <FaDownload /> Download
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-100 h-[600px] relative group">
+                    <iframe
+                      src={`http://localhost:5000/api/grievance/qc/download-pdf?url=${encodeURIComponent(report.report_pdf.startsWith('http') ? report.report_pdf : `http://localhost:5000/uploads/reports/${report.report_pdf}`)}&preview=true#toolbar=0&navpanes=0`}
+                      className="w-full h-full border-none"
+                      title="QC Report Preview"
+                    />
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-white/90 backdrop-blur px-2 py-1 rounded text-[9px] font-bold text-slate-500 shadow-sm border border-slate-200">
+                        SECURE PREVIEW ACTIVE
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center">
+            <FaFileAlt className="mx-auto text-slate-200 text-5xl mb-4" />
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Analytical report not yet submitted</p>
+          </div>
+        )}
       </div>
 
       {/* ================= PREVIEW MODAL ================= */}
@@ -596,7 +715,12 @@ export default function AdminReportView() {
                 />
               ) : isPDF(previewFile.name) ? (
                 <iframe
-                  src={previewFile.url}
+                  src={previewFile.url.startsWith('http') && previewFile.url.includes('/qc/download-pdf')
+                    ? previewFile.url + "&preview=true#toolbar=0&navpanes=0"
+                    : previewFile.url.startsWith('http') && previewFile.url.endsWith('.pdf')
+                      ? `http://localhost:5000/api/grievance/qc/download-pdf?url=${encodeURIComponent(previewFile.url)}&preview=true#toolbar=0&navpanes=0`
+                      : `${previewFile.url}#toolbar=0&navpanes=0`
+                  }
                   className="w-full h-[75vh]"
                   title="PDF Preview"
                 />

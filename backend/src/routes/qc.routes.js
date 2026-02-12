@@ -24,7 +24,7 @@ router.get("/qc/assessment/view/:code", authenticate, getQcAssessmentView);
 router.post("/qc/receive-sample", authenticate, postQcSampleReceived);
 router.get("/qc/report/view/:code", authenticate, getQcReportView);
 router.post("/qc/receive-report", authenticate, postQcReportReceived);
-router.get("/qc/download-pdf", authenticate, downloadReportPdf);
+router.get("/qc/download-pdf", downloadReportPdf);
 router.post("/qc/review", authenticate, postQcReview);
 router.get("/qc/full-details/:code", authenticate, getFullAssessmentDetails);
 router.post("/qc/resolve", authenticate, assessmentUpload.single("document"), postQcResolve);

@@ -12,6 +12,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import api from "../../services/api.js";
 import GovHeader from "../../components/GovHeader";
 
@@ -35,7 +36,9 @@ import {
   FaCalendarAlt,
   FaFilter,
   FaLayerGroup,
-  FaChartLine
+  FaChartLine,
+  FaExclamationTriangle,
+  FaSearch
 } from "react-icons/fa";
 
 /* ============================================================= */
@@ -47,6 +50,19 @@ export default function AdminDashboard() {
   /* ======================= ROUTER ============================= */
 
   const navigate = useNavigate();
+  const statusPriority = {
+    'SUBMITTED': 1,
+    'SAMPLE_DISPATCHED_FACILITY': 2,
+    'SAMPLE_RECEIVED_WH': 3,
+    'IN_PROGRESS_WH': 4,
+    'SAMPLE_DISPATCHED_WH': 5,
+    'SAMPLE_RECEIVED_QC': 6,
+    'REPORT_RECEIVED': 7,
+    'IN_PROGRESS_QC': 8,
+    'APPROVE_BY_QC': 8,
+    'RESOLVED': 9,
+    'REJECTED_WH': 10
+  };
 
   /* ============================================================= */
   /*                           STATE                               */
@@ -82,12 +98,19 @@ export default function AdminDashboard() {
   const [toDate, setToDate] = useState("");
   const [complaintType, setComplaintType] = useState("");
   const [dateFilter, setDateFilter] = useState("ALL");
+  const [scrollTrigger, setScrollTrigger] = useState(0);
+
+  /* SEARCH STATE */
+  const [complaintCode, setComplaintCode] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredIds, setFilteredIds] = useState([]);
 
   /* ============================================================= */
   /*                      API CALL LOGIC                           */
   /* ============================================================= */
 
-  const loadDashboard = async (sg = "", st = "", forceShow = false, fDate = fromDate, tDate = toDate) => {
+  const loadDashboard = async (sg = "", st = "", forceShow = false, fDate = fromDate, tDate = toDate, explicitType = null, cCode = complaintCode) => {
+    const finalType = explicitType !== null ? explicitType : complaintType;
     try {
       const res = await api.get("/grievance/admin/dashboard", {
         params: {
@@ -95,15 +118,21 @@ export default function AdminDashboard() {
           status: st,
           fromDate: fDate,
           toDate: tDate,
-          complaintType,
+          complaintType: finalType,
+          complaintCode: cCode,
           _t: Date.now()
         }
       });
 
-      setComplaints(res.data.complaints || []);
+      const sorted = (res.data.complaints || []).sort((a, b) => {
+        const pA = statusPriority[a.status] || 99;
+        const pB = statusPriority[b.status] || 99;
+        return pA - pB;
+      });
+      setComplaints(sorted);
       setCounts(res.data.counts || {});
 
-      if (!sg && !st && totalComplaints === 0) {
+      if (!sg && !st && !finalType && totalComplaints === 0) {
         setTotalComplaints(
           res.data.counts?.TOTAL_COMPLAINTS ||
           res.data.complaints.length
@@ -112,12 +141,15 @@ export default function AdminDashboard() {
 
       setStatusGroup(sg);
       setStatus(st);
+      if (explicitType !== null) setComplaintType(explicitType);
 
-      if (forceShow || sg || st || fDate || tDate || complaintType) {
-        setActiveView("TABLE");
-      } else {
-        setActiveView("DASHBOARD");
-      }
+      const view = (forceShow || sg || st || fDate || tDate || finalType || cCode) ? "TABLE" : "DASHBOARD";
+      setActiveView(view);
+
+      // ✅ PERSIST FILTERS
+      sessionStorage.setItem("admin_filters", JSON.stringify({
+        sg, st, fromDate: fDate, toDate: tDate, complaintType: finalType, activeView: view, complaintCode: cCode
+      }));
 
     } catch (err) {
       alert("Failed to load admin dashboard");
@@ -129,8 +161,21 @@ export default function AdminDashboard() {
   /* ============================================================= */
 
   useEffect(() => {
-    loadDashboard("", "");
-    setActiveView("DASHBOARD");
+    // ✅ RESTORE FILTERS
+    const saved = sessionStorage.getItem("admin_filters");
+    if (saved) {
+      const { sg, st, fromDate: fD, toDate: tD, complaintType: cT, activeView: aV, complaintCode: cC } = JSON.parse(saved);
+      setFromDate(fD || "");
+      setToDate(tD || "");
+      setComplaintType(cT || "");
+      setComplaintCode(cC || "");
+
+      // Load data with saved filters
+      loadDashboard(sg, st, aV === "TABLE", fD, tD, cT, cC);
+    } else {
+      loadDashboard("", "");
+      setActiveView("DASHBOARD");
+    }
 
     api
       .get("/grievance/admin/avg-handling-time")
@@ -153,24 +198,46 @@ export default function AdminDashboard() {
         tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
-  }, [activeView, status, statusGroup, avgModule, resolutionRange]);
+  }, [activeView, status, statusGroup, avgModule, resolutionRange, scrollTrigger]);
 
 
+
+  /* ============================================================= */
+  /*                     COMPLAINT SEARCH                          */
+  /* ============================================================= */
+
+  const handleComplaintSearchChange = (value) => {
+    setComplaintCode(value);
+    setShowDropdown(true);
+
+    if (!value) {
+      setFilteredIds([]);
+      return;
+    }
+
+    const matches = complaints.filter((c) =>
+      c.complaint_code?.toLowerCase().includes(value.toLowerCase())
+    );
+
+    setFilteredIds(matches);
+  };
 
   /* ============================================================= */
   /*                     CLEAR FILTERS                             */
   /* ============================================================= */
 
   const clearFilters = () => {
+    sessionStorage.removeItem("admin_filters");
     setStatus("");
     setStatusGroup("");
     setFromDate("");
     setToDate("");
     setComplaintType("");
+    setComplaintCode("");
     setDateFilter("ALL");
     setComplaints([]);
     setActiveView("DASHBOARD");
-    loadDashboard("", "", false, "", "");
+    loadDashboard("", "", false, "", "", "");
   };
 
   /* ============================================================= */
@@ -204,36 +271,59 @@ export default function AdminDashboard() {
       filename = `resolution_report_${resolutionRange}_${new Date().toISOString().split('T')[0]}`;
     }
 
+    const formatDateCSV = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return ` ${day}-${month}-${year} ${hours}:${minutes}`;
+    };
+
     if (format === 'CSV') {
-      const csvRows = [headers[0]];
+      // Create HTML table with bold headers that Excel can open
+      let htmlContent = '<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body><table>';
+
+      // Add header row
+      htmlContent += '<thead><tr>';
+      headers[0].forEach(header => {
+        htmlContent += `<th>${header}</th>`;
+      });
+      htmlContent += '</tr></thead><tbody>';
+
+      // Add data rows
       data.forEach(row => {
+        htmlContent += '<tr>';
         if (type === 'TABLE' || type === 'MAIN') {
-          csvRows.push([
-            row.complaint_code,
-            row.created_at ? new Date(row.created_at).toLocaleDateString() : '-',
-            row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : '-',
-            row.complaint_type,
-            row.status
-          ]);
+          htmlContent += `<td>${row.complaint_code}</td>`;
+          htmlContent += `<td>${formatDateCSV(row.created_at)}</td>`;
+          htmlContent += `<td>${formatDateCSV(row.resolved_at)}</td>`;
+          htmlContent += `<td>${row.complaint_type}</td>`;
+          htmlContent += `<td>${row.status}</td>`;
         } else {
-          csvRows.push([
-            row.code,
-            row.start_date || row.created_at ? new Date(row.start_date || row.created_at).toLocaleDateString() : '-',
-            row.end_date || row.resolved_at ? new Date(row.end_date || row.resolved_at).toLocaleDateString() : '-',
-            row.days
-          ]);
+          htmlContent += `<td>${row.code}</td>`;
+          htmlContent += `<td>${formatDateCSV(row.start_date || row.created_at)}</td>`;
+          htmlContent += `<td>${formatDateCSV(row.end_date || row.resolved_at)}</td>`;
+          htmlContent += `<td>${row.days}</td>`;
         }
+        htmlContent += '</tr>';
       });
 
-      const csvContent = csvRows.map(e => e.join(",")).join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
+      htmlContent += '</tbody></table></body></html>';
+
+      // Create blob and download as .xls (HTML format that Excel opens)
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
       const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${filename}.csv`);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}.xls`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } else {
       // PDF
       doc.text(title, 14, 22);
@@ -334,13 +424,24 @@ export default function AdminDashboard() {
 
     loadDashboard(statusGroup, status, true, formattedStart, formattedEnd);
   };
+
+  /* ============================================================= */
+  /*              COMPLAINT TYPE FILTER DATA                       */
+  /* ============================================================= */
+
+  const typeFilters = [
+    { label: "Physical", type: "PHYSICAL", icon: <FaBoxOpen />, color: "bg-amber-50 text-amber-600" },
+    { label: "ADR", type: "ADR", icon: <FaFlask />, color: "bg-indigo-50 text-indigo-600" },
+    { label: "Poor Quality", type: "QUALITY", icon: <FaExclamationTriangle className="text-blue-500" />, color: "bg-blue-50 text-blue-600" }
+  ];
+
   /* ============================================================= */
   /*              STATUS BAR GRAPH DATA (ADD HERE)                 */
   /* ============================================================= */
 
   const statusBarData = [
     {
-      label: "Submitted",
+      label: "Complaint Raised",
       count: counts.SUBMITTED || 0,
       sg: "",
       st: "SUBMITTED",
@@ -500,14 +601,27 @@ export default function AdminDashboard() {
     setToDate("");
     setComplaintType("");
     setDateFilter("ALL");
+    setScrollTrigger(prev => prev + 1);
     loadDashboard("", "", true);
   };
-  // ===== CSV DOWNLOAD HANDLER =====
-  const handleCSVDownload = () => {
+  // ===== EXCEL DOWNLOAD HANDLER =====
+  const handleExcelDownload = () => {
     if (!complaints || complaints.length === 0) {
       alert("No complaints available to download");
       return;
     }
+
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${day}-${month}-${year} ${hours}:${minutes}`;
+    };
 
     const headers = [
       "Complaint Code",
@@ -524,38 +638,129 @@ export default function AdminDashboard() {
       c.facility_name,
       c.item_name,
       c.status,
-      new Date(c.created_at).toLocaleDateString()
+      formatDate(c.created_at)
     ]);
 
-    let csvContent =
-      headers.join(",") +
-      "\n" +
-      rows.map(r => r.map(v => `"${v ?? ""}"`).join(",")).join("\n");
+    // Create HTML table with bold headers that Excel can open
+    let htmlContent = '<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body><table>';
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    // Add header row
+    htmlContent += '<thead><tr>';
+    headers.forEach(header => {
+      htmlContent += `<th>${header}</th>`;
+    });
+    htmlContent += '</tr></thead><tbody>';
+
+    // Add data rows
+    rows.forEach(row => {
+      htmlContent += '<tr>';
+      row.forEach(cell => {
+        htmlContent += `<td>${cell}</td>`;
+      });
+      htmlContent += '</tr>';
+    });
+
+    htmlContent += '</tbody></table></body></html>';
+
+    // Create blob and download as .xls (HTML format that Excel opens)
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
-    link.setAttribute("download", "complaints_report.csv");
+    link.download = `Admin_Complaints_${new Date().toISOString().split('T')[0]}.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // ===== CSV DOWNLOAD HANDLER (NOW USES XLSX WITH BOLD HEADERS) =====
+  const handleCSVDownload = () => {
+    if (!complaints || complaints.length === 0) {
+      alert("No complaints available to download");
+      return;
+    }
+
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${day}-${month}-${year} ${hours}:${minutes}`;
+    };
+
+    const headers = [
+      "Complaint Code",
+      "Complaint Type",
+      "Facility",
+      "Item",
+      "Status",
+      "Created Date"
+    ];
+
+    const rows = complaints.map(c => [
+      c.complaint_code,
+      c.complaint_type,
+      c.facility_name,
+      c.item_name,
+      c.status,
+      formatDate(c.created_at)
+    ]);
+
+    // Create HTML table with bold headers that Excel can open
+    let htmlContent = '<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body><table>';
+
+    // Add header row
+    htmlContent += '<thead><tr>';
+    headers.forEach(header => {
+      htmlContent += `<th>${header}</th>`;
+    });
+    htmlContent += '</tr></thead><tbody>';
+
+    // Add data rows
+    rows.forEach(row => {
+      htmlContent += '<tr>';
+      row.forEach(cell => {
+        htmlContent += `<td>${cell}</td>`;
+      });
+      htmlContent += '</tr>';
+    });
+
+    htmlContent += '</tbody></table></body></html>';
+
+    // Create blob and download as .xls (HTML format that Excel opens)
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `complaints_report_${new Date().toISOString().split('T')[0]}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // ===== AVG BAR CLICK HANDLER (SEPARATE TABLE) =====
   const handleAvgBarClick = (moduleKey) => {
     setAvgModule(moduleKey);
-    setAvgTableData(avgTimeData?.details?.[moduleKey] || []);
+    // Sort by days ascending (1 to infinity)
+    const data = [...(avgTimeData?.details?.[moduleKey] || [])].sort((a, b) => a.days - b.days);
+    setAvgTableData(data);
     setActiveView("AVG_TABLE");
+    setScrollTrigger(prev => prev + 1);
   };
   // ===== RESOLUTION BAR CLICK HANDLER =====
   const handleResolutionBarClick = (rangeKey, label) => {
     setResolutionRange(label);
-    setResolutionTable(
-      resolutionGraph?.details?.[rangeKey] || []
-    );
+    // Sort by days ascending (1 to infinity)
+    const data = [...(resolutionGraph?.details?.[rangeKey] || [])].sort((a, b) => a.days - b.days);
+    setResolutionTable(data);
     setActiveView("RESOLUTION_TABLE");
+    setScrollTrigger(prev => prev + 1);
   };
 
 
@@ -627,6 +832,41 @@ export default function AdminDashboard() {
             </button>
 
             <div className="px-2 mt-6 mb-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type Filters</p>
+            </div>
+
+            {typeFilters.map((item) => {
+              const isActive = complaintType === item.type;
+              return (
+                <button
+                  key={item.type}
+                  onClick={() => {
+                    setScrollTrigger(prev => prev + 1);
+                    if (isActive) {
+                      clearFilters();
+                    } else {
+                      loadDashboard("", "", true, fromDate, toDate, item.type);
+                    }
+                  }}
+                  className={`w-full p-3 rounded-xl text-left border transition-all duration-200 flex items-center justify-between group ${isActive
+                    ? 'bg-slate-800 border-slate-800 text-white shadow-md'
+                    : 'bg-white border-slate-200 hover:border-indigo-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20 text-white' : `${item.color} group-hover:bg-white`}`}>
+                      {item.icon}
+                    </div>
+                    <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>{item.label}</span>
+                  </div>
+                  <span className={`text-xs font-black ${isActive ? 'bg-white text-slate-800' : 'bg-slate-100 text-slate-600'} px-2 py-1 rounded-md`}>
+                    {counts[item.type] || 0}
+                  </span>
+                </button>
+              );
+            })}
+
+            <div className="px-2 mt-6 mb-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Filters</p>
             </div>
 
@@ -635,7 +875,14 @@ export default function AdminDashboard() {
               return (
                 <button
                   key={item.label}
-                  onClick={() => loadDashboard(item.sg, item.st, true)}
+                  onClick={() => {
+                    setScrollTrigger(prev => prev + 1);
+                    if (isActive) {
+                      clearFilters();
+                    } else {
+                      loadDashboard(item.sg, item.st, true);
+                    }
+                  }}
                   className={`w-full p-3 rounded-xl text-left border transition-all duration-200 flex items-center justify-between group ${isActive
                     ? 'bg-slate-800 border-slate-800 text-white shadow-md'
                     : 'bg-white border-slate-200 hover:border-indigo-300 text-slate-600 hover:bg-slate-50'
@@ -674,13 +921,13 @@ export default function AdminDashboard() {
             <div>
               <h1 className="text-xl font-black text-slate-800 tracking-tight">Dashboard Overview</h1>
               <p className="text-xs text-slate-500 font-medium mt-1">
-                {status ? `Filtered by: ${status}` : activeView === 'DASHBOARD' ? 'Showing all records' : 'Filtered View'}
+                {status ? `Filtered by Status: ${status}` : complaintType ? `Filtered by Type: ${complaintType}` : activeView === 'DASHBOARD' ? 'Showing all records' : 'Filtered View'}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               {/* CLEAR FILTER BUTTON */}
-              {(status || statusGroup || fromDate || toDate || complaintType || dateFilter !== "ALL") && (
+              {(status || statusGroup || fromDate || toDate || complaintType || dateFilter !== "ALL" || activeView === 'TABLE') && (
                 <button
                   onClick={clearFilters}
                   className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-2"
@@ -688,6 +935,41 @@ export default function AdminDashboard() {
                   <FaBroom /> Clear
                 </button>
               )}
+
+              {/* Complaint Search */}
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaSearch className="text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+                <input
+                  value={complaintCode}
+                  onChange={(e) => handleComplaintSearchChange(e.target.value)}
+                  onFocus={() => {
+                    setShowDropdown(true);
+                    setFilteredIds(complaints);
+                  }}
+                  className="pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-xs font-bold text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none w-64 transition-all"
+                  placeholder="Search Complaint ID..."
+                />
+                {showDropdown && filteredIds.length > 0 && (
+                  <div className="absolute bg-white border border-slate-100 w-full mt-2 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                    {filteredIds.map((c) => (
+                      <div
+                        key={c.complaint_code}
+                        onClick={() => {
+                          setComplaintCode(c.complaint_code);
+                          setShowDropdown(false);
+                          loadDashboard(statusGroup, status, true, fromDate, toDate, complaintType, c.complaint_code);
+                        }}
+                        className="px-4 py-3 cursor-pointer hover:bg-indigo-50 text-xs font-bold text-slate-700 border-b border-slate-50 last:border-0"
+                      >
+                        {c.complaint_code}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                 <select
                   value={dateFilter}
@@ -844,7 +1126,7 @@ export default function AdminDashboard() {
                 {/* STATUS BAR GRAPH */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 xl:col-span-2">
                   <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
-                    <FaChartBar className="text-blue-500" /> Overall Status Distribution
+                    <FaChartBar className="text-blue-500" /> Complaint Status Analysis
                   </h3>
                   <div className="h-64 flex items-end justify-between gap-2 px-4">
                     {statusBarData.map(bar => {
@@ -852,7 +1134,14 @@ export default function AdminDashboard() {
                       const height = bar.count === 0 ? 2 : Math.max((bar.count / maxCount) * 100, 10);
 
                       return (
-                        <div key={bar.label} className="flex flex-col items-center group flex-1 cursor-pointer h-full justify-end" onClick={() => loadDashboard(bar.sg, bar.st, true)}>
+                        <div key={bar.label} className="flex flex-col items-center group flex-1 cursor-pointer h-full justify-end" onClick={() => {
+                          const isActive = status === bar.st || (bar.sg && statusGroup === bar.sg);
+                          if (isActive) {
+                            clearFilters();
+                          } else {
+                            loadDashboard(bar.sg, bar.st, true);
+                          }
+                        }}>
                           <div className={`mb-2 text-xs font-bold text-slate-600 transition-colors ${bar.hoverColor.replace('bg', 'text')}`}>{bar.count}</div>
                           <div className="w-full h-full flex items-end">
                             <div className={`w-full rounded-t-lg bg-gradient-to-t ${bar.gradient} shadow-md transition-all duration-300 relative overflow-hidden`} style={{ height: `${height}%` }}></div>
@@ -867,7 +1156,7 @@ export default function AdminDashboard() {
                 {/* AVG HANDLING TIME */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
-                    <FaChartLine className="text-green-500" /> Avg. Handling Time (Days)
+                    <FaChartLine className="text-green-500" /> Avg. Handling Time of complaints (Days)
                   </h3>
                   <div className="flex items-end justify-around h-48">
                     {avgHandlingBars.map(bar => {
@@ -890,7 +1179,7 @@ export default function AdminDashboard() {
                 {/* RESOLUTION TIME */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <h3 className="font-bold text-slate-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
-                    <FaCheckCircle className="text-purple-500" /> Resolution Timeline
+                    <FaCheckCircle className="text-purple-500" /> Resolution Timeline of complaints
                   </h3>
                   <div className="flex items-end justify-around h-48">
                     {resolutionBars.map(bar => {
@@ -942,6 +1231,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-4 text-left">Start Date</th>
                         <th className="px-6 py-4 text-left">End Date</th>
                         <th className="px-6 py-4 text-left">Days Taken</th>
+                        <th className="px-6 py-4 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -955,6 +1245,14 @@ export default function AdminDashboard() {
                             {r.end_date ? new Date(r.end_date).toLocaleDateString() : '-'}
                           </td>
                           <td className="px-6 py-4 font-bold text-green-600">{r.days} Days</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => navigate(`/admin/report/view/${r.code}`)}
+                              className="text-indigo-600 hover:text-white font-black text-[10px] uppercase border border-indigo-200 bg-indigo-50 px-3 py-1.5 rounded-lg hover:border-indigo-600 hover:bg-indigo-600 transition-all shadow-sm"
+                            >
+                              View
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -990,6 +1288,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-4 text-left">Start Date</th>
                         <th className="px-6 py-4 text-left">End Date</th>
                         <th className="px-6 py-4 text-left">Days Taken</th>
+                        <th className="px-6 py-4 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1004,6 +1303,14 @@ export default function AdminDashboard() {
                               r.rejected_at ? new Date(r.rejected_at).toLocaleDateString() : '-'}
                           </td>
                           <td className="px-6 py-4 font-bold text-purple-600">{r.days} Days</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => navigate(`/admin/report/view/${r.code}`)}
+                              className="text-indigo-600 hover:text-white font-black text-[10px] uppercase border border-indigo-200 bg-indigo-50 px-3 py-1.5 rounded-lg hover:border-indigo-600 hover:bg-indigo-600 transition-all shadow-sm"
+                            >
+                              View
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

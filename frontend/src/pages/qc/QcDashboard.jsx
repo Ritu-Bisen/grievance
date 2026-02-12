@@ -29,6 +29,19 @@ import {
 
 export default function QcDashboard() {
     const navigate = useNavigate();
+    const statusPriority = {
+        'SUBMITTED': 1,
+        'SAMPLE_DISPATCHED_FACILITY': 2,
+        'SAMPLE_RECEIVED_WH': 3,
+        'IN_PROGRESS_WH': 4,
+        'SAMPLE_DISPATCHED_WH': 5,
+        'SAMPLE_RECEIVED_QC': 6,
+        'REPORT_RECEIVED': 7,
+        'IN_PROGRESS_QC': 8,
+        'APPROVE_BY_QC': 8,
+        'RESOLVED': 9,
+        'REJECTED_WH': 10
+    };
 
     /* ======================= STATE ============================== */
 
@@ -78,7 +91,12 @@ export default function QcDashboard() {
                 }
             });
 
-            setComplaints(res.data.complaints || []);
+            const sorted = (res.data.complaints || []).sort((a, b) => {
+                const pA = statusPriority[a.status] || 99;
+                const pB = statusPriority[b.status] || 99;
+                return pA - pB;
+            });
+            setComplaints(sorted);
         } catch (err) {
             console.error("QC DASHBOARD ERROR:", err);
             alert("Failed to load QC dashboard");
@@ -218,7 +236,19 @@ export default function QcDashboard() {
     const handleDownload = (format) => {
         setActiveDownloadMenu(null);
         const filename = `qc_dashboard_${new Date().toISOString().split('T')[0]}`;
-        const headers = [["S No", "Complaint ID", "Type", "Facility", "Item", "Status", "Date"]];
+        const headers = [["S No.", "Complaint ID", "Type", "Facility", "Item", "Status", "Date"]];
+
+        const formatDateCSV = (date) => {
+            if (!date) return "-";
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return "-";
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}-${month}-${year} ${hours}:${minutes}`;
+        };
 
         const data = complaints.map((c, i) => [
             i + 1,
@@ -227,19 +257,41 @@ export default function QcDashboard() {
             c.facility_name,
             c.item_name,
             c.status,
-            new Date(c.created_at).toLocaleDateString()
+            formatDateCSV(c.created_at)
         ]);
 
         if (format === 'CSV') {
-            const csvRows = [headers[0], ...data];
-            const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `${filename}.csv`);
+            // Create HTML table with bold headers that Excel can open
+            let htmlContent = '<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body><table>';
+
+            // Add header row
+            htmlContent += '<thead><tr>';
+            headers[0].forEach(header => {
+                htmlContent += `<th>${header}</th>`;
+            });
+            htmlContent += '</tr></thead><tbody>';
+
+            // Add data rows
+            data.forEach(row => {
+                htmlContent += '<tr>';
+                row.forEach(cell => {
+                    htmlContent += `<td>${cell}</td>`;
+                });
+                htmlContent += '</tr>';
+            });
+
+            htmlContent += '</tbody></table></body></html>';
+
+            // Create blob and download as .xls (HTML format that Excel opens)
+            const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${filename}.xls`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } else {
             const doc = new jsPDF();
             doc.text("QC Dashboard Report", 14, 20);
@@ -251,7 +303,18 @@ export default function QcDashboard() {
                 head: headers,
                 body: data,
                 theme: 'striped',
-                headStyles: { fillHex: '#4f46e5' }
+                styles: { fontSize: 8 }, // Smaller font to fit content
+                headStyles: { fillColor: [79, 70, 229], halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 12, halign: 'center' }, // S No.
+                    1: { cellWidth: 35 }, // Complaint ID
+                    2: { cellWidth: 20 }, // Type
+                    3: { cellWidth: 30 }, // Facility
+                    4: { cellWidth: 25 }, // Item
+                    5: { cellWidth: 30 }, // Status
+                    6: { cellWidth: 30 }  // Date
+                },
+                margin: { left: 10, right: 10 }
             });
             doc.save(`${filename}.pdf`);
         }
@@ -397,6 +460,16 @@ export default function QcDashboard() {
                                 )}
                             </div>
 
+                            {/* CLEAR FILTER BUTTON */}
+                            {(activeComplaintType || status || complaintCode || fromDate || toDate || dateFilter !== "ALL") && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-2"
+                                >
+                                    <FaBroom /> Clear
+                                </button>
+                            )}
+
                             {/* Status Select */}
                             <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                                 <select
@@ -434,12 +507,14 @@ export default function QcDashboard() {
                             </div>
 
                             {/* CLEAR FILTER BUTTON */}
-                            <button
-                                onClick={clearFilters}
-                                className="flex items-center gap-2 bg-white border border-slate-300 text-slate-600 px-4 py-2 rounded-lg text-xs font-black hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all active:scale-95 shadow-sm"
-                            >
-                                <FaBroom /> Clear Filter
-                            </button>
+                            {(status || complaintCode || fromDate || toDate || dateFilter !== "ALL") && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-xs font-black hover:bg-red-100 transition-all active:scale-95 shadow-sm"
+                                >
+                                    <FaBroom /> Clear Filter
+                                </button>
+                            )}
 
                             {/* DOWNLOAD BUTTON */}
                             <div className="relative">
@@ -531,7 +606,7 @@ export default function QcDashboard() {
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
                                         {[
-                                            "S No", "Complaint ID", "Type", "Facility", "Item", "Status", "Date", "Action"
+                                            "S No", "Complaint ID", "Type", "Facility", "Item", "Status", "Start Date", "End Date", "Action"
                                         ].map((h, idx) => (
                                             <th key={idx} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
                                         ))}
@@ -540,7 +615,7 @@ export default function QcDashboard() {
                                 <tbody className="divide-y divide-slate-100">
                                     {complaints.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="p-12 text-center text-slate-400 font-medium italic">No records found matching your criteria.</td>
+                                            <td colSpan="9" className="p-12 text-center text-slate-400 font-medium italic">No records found matching your criteria.</td>
                                         </tr>
                                     ) : (
                                         complaints.map((c, i) => (
@@ -555,8 +630,11 @@ export default function QcDashboard() {
                                                         {c.status?.replace(/_/g, ' ')}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-500 font-bold text-[10px]">
-                                                    {new Date(c.created_at).toLocaleDateString()}
+                                                <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
+                                                    {c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
+                                                    {c.resolved_at ? new Date(c.resolved_at).toLocaleDateString() : '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex gap-2 justify-end">

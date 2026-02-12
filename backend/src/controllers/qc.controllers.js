@@ -42,15 +42,16 @@ export const getQcDashboard = async (req, res) => {
         c.documents,
         c.status,
         c.created_at,
+        c.resolved_at,
         c.warehouse_code,
         c.complaint_close_date,
         wa.sample_dispatch_date,
         wa.assessment_type,
         qa.status AS qc_status
       FROM complaints c
-      INNER JOIN warehouse_assessments wa ON c.complaint_code = wa.complaint_code
+      LEFT JOIN warehouse_assessments wa ON c.complaint_code = wa.complaint_code
       LEFT JOIN qc_assessments qa ON c.complaint_code = qa.complaint_code
-      WHERE (wa.sample_dispatch_date IS NOT NULL OR wa.assessment_type = 'PHYSICAL')
+      WHERE (wa.sample_dispatch_date IS NOT NULL OR c.complaint_type = 'PHYSICAL')
     `;
 
         const params = [];
@@ -320,8 +321,13 @@ export const downloadReportPdf = async (req, res) => {
         const contentType = response.headers.get('content-type') || 'application/pdf';
 
         // Set headers for download
+        const { preview } = req.query;
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', 'attachment; filename="report.pdf"');
+        if (preview === 'true') {
+            res.setHeader('Content-Disposition', 'inline');
+        } else {
+            res.setHeader('Content-Disposition', 'attachment; filename="report.pdf"');
+        }
 
         // Pipe the response body to our response
         const arrayBuffer = await response.arrayBuffer();
@@ -372,6 +378,7 @@ export const postQcReview = async (req, res) => {
             await pool.execute(
                 `UPDATE complaints 
                  SET complaint_close_date = CURRENT_TIMESTAMP,
+                     resolved_at = CURRENT_TIMESTAMP,
                      status = ?
                  WHERE complaint_code = ?`,
                 ['REJECT_BY_QC', complaint_code]
@@ -479,7 +486,8 @@ export const postQcResolve = async (req, res) => {
         await pool.execute(
             `UPDATE complaints 
              SET status = 'RESOLVED', 
-                 complaint_close_date = CURRENT_TIMESTAMP 
+                 complaint_close_date = CURRENT_TIMESTAMP,
+                 resolved_at = CURRENT_TIMESTAMP 
              WHERE complaint_code = ?`,
             [complaint_code]
         );

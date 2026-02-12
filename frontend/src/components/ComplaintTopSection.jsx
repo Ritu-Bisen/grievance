@@ -62,7 +62,13 @@ export default function ComplaintTopSection({ complaint }) {
               ["Type", complaint.complaint_type],
               ["Category", complaint.category],
               ["Facility", complaint.facility_name],
-              ["Warehouse Code", complaint.warehouse_code || "—"],
+              ["Warehouse Code", (() => {
+                const warehouseNames = {
+                  "WH-001": "Ambikapur Warehouse",
+                  "WH-002": "Dantewada Warehouse"
+                };
+                return warehouseNames[complaint.warehouse_code] || complaint.warehouse_code || "—";
+              })()],
               ["Status", complaint.status],
               ["Created On", complaint.created_at ? new Date(complaint.created_at).toLocaleString() : "—"],
             ].map(([label, value]) => (
