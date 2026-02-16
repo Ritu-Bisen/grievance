@@ -232,7 +232,17 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
     i.code.toLowerCase().includes(itemCodeQuery.toLowerCase())
   );
 
-  const batchResults = batches.filter(b =>
+  /* 🔹 BATCH FILTERING */
+  const user = JSON.parse(localStorage.getItem("user"));
+  const warehouseCode = user?.role === "WAREHOUSE" ? user.warehouse_code : null;
+
+  const filteredBatches = batches.filter(b => {
+    // If user is WAREHOUSE, only show their batches
+    if (warehouseCode && b.warehouse_code !== warehouseCode) return false;
+    return true;
+  });
+
+  const batchResults = filteredBatches.filter(b =>
     b.batchNo.toLowerCase().includes(batchQuery.toLowerCase())
   );
 

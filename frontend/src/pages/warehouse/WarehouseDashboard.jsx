@@ -2,7 +2,7 @@
 /*                  WAREHOUSE DASHBOARD                          */
 /* ============================================================= */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -58,6 +58,19 @@ export default function WarehouseDashboard() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredIds, setFilteredIds] = useState([]);
   const [activeDownloadMenu, setActiveDownloadMenu] = useState(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   /* =================== PERSISTENCE ============================ */
 
@@ -321,6 +334,16 @@ export default function WarehouseDashboard() {
     }
   };
 
+  const formatDateDDMMYYYY = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   /* =========================== UI ============================= */
 
   return (
@@ -441,7 +464,7 @@ export default function WarehouseDashboard() {
             <div className="flex items-center gap-4">
 
               {/* Complaint Search */}
-              <div className="relative group">
+              <div className="relative group" ref={dropdownRef}>
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaSearch className="text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors" />
                 </div>
@@ -452,8 +475,14 @@ export default function WarehouseDashboard() {
                     setShowDropdown(true);
                     setFilteredIds(complaints);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setShowDropdown(false);
+                      loadDashboard(activeComplaintType, fromDate, toDate, status, complaintCode);
+                    }
+                  }}
                   className="pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-xs font-bold text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none w-64 transition-all"
-                  placeholder="Search Complaint ID..."
+                  placeholder="Search Complaint ID (Press Enter)"
                 />
                 {showDropdown && filteredIds.length > 0 && (
                   <div className="absolute bg-white border border-slate-100 w-full mt-2 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2">
@@ -463,6 +492,7 @@ export default function WarehouseDashboard() {
                         onClick={() => {
                           setComplaintCode(c.complaint_code);
                           setShowDropdown(false);
+                          loadDashboard(activeComplaintType, fromDate, toDate, status, c.complaint_code);
                         }}
                         className="px-4 py-3 cursor-pointer hover:bg-indigo-50 text-xs font-bold text-slate-700 border-b border-slate-50 last:border-0"
                       >
@@ -637,10 +667,10 @@ export default function WarehouseDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
-                          {c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}
+                          {formatDateDDMMYYYY(c.created_at)}
                         </td>
                         <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
-                          {c.resolved_at ? new Date(c.resolved_at).toLocaleDateString() : '-'}
+                          {formatDateDDMMYYYY(c.resolved_at)}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button

@@ -5,12 +5,13 @@ export default function GovHeader({ title, subtitle }) {
 
   const handleLogout = () => {
     localStorage.clear();
+    sessionStorage.clear();
     navigate("/login", { replace: true });
   };
 
   return (
     <header className="relative bg-gradient-to-r from-blue-800 via-blue-900 to-blue-800 shadow-lg mb-6">
-      
+
       {/* 🔴 LOGOUT TOP RIGHT */}
       <button
         onClick={handleLogout}
@@ -22,7 +23,7 @@ export default function GovHeader({ title, subtitle }) {
       {/* Main Header Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          
+
           {/* Left Logo */}
           <div className="flex-shrink-0">
             <img

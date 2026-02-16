@@ -2,7 +2,7 @@
 /*                      QC DASHBOARD                             */
 /* ============================================================= */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -59,6 +59,19 @@ export default function QcDashboard() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [filteredIds, setFilteredIds] = useState([]);
     const [activeDownloadMenu, setActiveDownloadMenu] = useState(null);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     /* =================== PERSISTENCE ============================ */
 
@@ -320,6 +333,16 @@ export default function QcDashboard() {
         }
     };
 
+    const formatDateDDMMYYYY = (dateString) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '-';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     /* =========================== UI ============================= */
 
     return (
@@ -428,7 +451,7 @@ export default function QcDashboard() {
                         <div className="flex items-center gap-4">
 
                             {/* Complaint Search */}
-                            <div className="relative group">
+                            <div className="relative group" ref={dropdownRef}>
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <FaSearch className="text-slate-400 text-xs group-focus-within:text-indigo-500 transition-colors" />
                                 </div>
@@ -439,8 +462,14 @@ export default function QcDashboard() {
                                         setShowDropdown(true);
                                         setFilteredIds(complaints);
                                     }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            setShowDropdown(false);
+                                            loadDashboard(activeComplaintType, fromDate, toDate, status, complaintCode);
+                                        }
+                                    }}
                                     className="pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg text-xs font-bold text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none w-64 transition-all"
-                                    placeholder="Search Complaint ID..."
+                                    placeholder="Search Complaint ID (Press Enter)"
                                 />
                                 {showDropdown && filteredIds.length > 0 && (
                                     <div className="absolute bg-white border border-slate-100 w-full mt-2 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2">
@@ -450,6 +479,7 @@ export default function QcDashboard() {
                                                 onClick={() => {
                                                     setComplaintCode(c.complaint_code);
                                                     setShowDropdown(false);
+                                                    loadDashboard(activeComplaintType, fromDate, toDate, status, c.complaint_code);
                                                 }}
                                                 className="px-4 py-3 cursor-pointer hover:bg-indigo-50 text-xs font-bold text-slate-700 border-b border-slate-50 last:border-0"
                                             >
@@ -460,15 +490,6 @@ export default function QcDashboard() {
                                 )}
                             </div>
 
-                            {/* CLEAR FILTER BUTTON */}
-                            {(activeComplaintType || status || complaintCode || fromDate || toDate || dateFilter !== "ALL") && (
-                                <button
-                                    onClick={clearFilters}
-                                    className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-2"
-                                >
-                                    <FaBroom /> Clear
-                                </button>
-                            )}
 
                             {/* Status Select */}
                             <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
@@ -507,12 +528,12 @@ export default function QcDashboard() {
                             </div>
 
                             {/* CLEAR FILTER BUTTON */}
-                            {(status || complaintCode || fromDate || toDate || dateFilter !== "ALL") && (
+                            {(activeComplaintType || status || complaintCode || fromDate || toDate || dateFilter !== "ALL") && (
                                 <button
                                     onClick={clearFilters}
                                     className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-xs font-black hover:bg-red-100 transition-all active:scale-95 shadow-sm"
                                 >
-                                    <FaBroom /> Clear Filter
+                                    <FaBroom /> Clear Filters
                                 </button>
                             )}
 
@@ -631,10 +652,10 @@ export default function QcDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
-                                                    {c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}
+                                                    {formatDateDDMMYYYY(c.created_at)}
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-500 font-bold text-[10px] whitespace-nowrap">
-                                                    {c.resolved_at ? new Date(c.resolved_at).toLocaleDateString() : '-'}
+                                                    {formatDateDDMMYYYY(c.resolved_at)}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex gap-2 justify-end">
@@ -644,29 +665,6 @@ export default function QcDashboard() {
                                                         >
                                                             View
                                                         </button>
-
-                                                        {c.status === "SAMPLE_DISPATCHED_WH" ? (
-                                                            <button
-                                                                onClick={() => navigate(`/qc/sample-received/${c.complaint_code}`)}
-                                                                className="bg-indigo-600 text-white font-black text-[10px] uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-all"
-                                                            >
-                                                                Receive
-                                                            </button>
-                                                        ) : c.status === "SAMPLE_RECEIVED_QC" ? (
-                                                            <button
-                                                                onClick={() => navigate(`/qc/report-received/${c.complaint_code}`)}
-                                                                className="bg-green-600 text-white font-black text-[10px] uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-green-700 transition-all"
-                                                            >
-                                                                Report
-                                                            </button>
-                                                        ) : (c.status === "REPORT_RECEIVED" || c.status === "APPROVE_BY_QC") && !c.complaint_close_date ? (
-                                                            <button
-                                                                onClick={() => navigate(`/qc/resolve/${c.complaint_code}`)}
-                                                                className="bg-blue-600 text-white font-black text-[10px] uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 transition-all"
-                                                            >
-                                                                Resolve
-                                                            </button>
-                                                        ) : null}
                                                     </div>
                                                 </td>
                                             </tr>

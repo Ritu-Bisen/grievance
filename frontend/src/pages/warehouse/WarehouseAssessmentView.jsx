@@ -433,13 +433,19 @@ export default function WarehouseAssessmentView() {
 
   /* ---------- FILE HELPERS ---------- */
   const getFileName = (doc) => {
-    if (typeof doc === "string") return doc.split("-").slice(1).join("-");
-    return doc.original_name;
+    const name = typeof doc === "string" ? doc : doc.original_name || doc.file_name;
+    if (!name) return "Unnamed File";
+    if (typeof name === "string" && name.includes("-")) {
+      const parts = name.split("-");
+      if (parts.length > 1) return parts.slice(1).join("-");
+    }
+    return name;
   };
 
   const getFilePath = (doc) => {
-    if (typeof doc === "string") return doc;
-    return doc.path || doc.file_name;
+    if (typeof doc === "string") return encodeURIComponent(doc);
+    const path = doc.path || doc.file_name;
+    return encodeURIComponent(path);
   };
 
   const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
@@ -838,9 +844,14 @@ export default function WarehouseAssessmentView() {
                             {isImg ? (
                               <img src={fullUrl} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="thumb" />
                             ) : isPdf ? (
-                              <div className="flex flex-col items-center gap-1 group-hover:scale-110 transition duration-500">
-                                <div className="w-14 h-18 bg-red-100 border-2 border-red-200 rounded-lg relative flex items-center justify-center shadow-sm">
-                                  <span className="text-[9px] font-black text-red-700 bg-white px-1 py-0.5 rounded shadow-sm border border-red-100 italic">PDF</span>
+                              <div className="w-full h-full p-2 group-hover:scale-110 transition duration-500">
+                                <div className="w-full h-full bg-white border border-red-200 rounded-lg shadow-sm overflow-hidden relative">
+                                  <iframe
+                                    src={`${fullUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                                    className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none"
+                                    title="PDF Preview"
+                                  />
+                                  <div className="absolute top-1 right-1 bg-red-600 text-white text-[8px] px-1 rounded font-bold">PDF</div>
                                 </div>
                               </div>
                             ) : (
@@ -976,8 +987,15 @@ export default function WarehouseAssessmentView() {
                           {isImg ? (
                             <img src={fullUrl} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="thumb" />
                           ) : isPdf ? (
-                            <div className="w-14 h-18 bg-red-100 border-2 border-red-200 rounded-lg relative flex items-center justify-center shadow-sm group-hover:scale-110 transition duration-500">
-                              <span className="text-[9px] font-black text-red-700 bg-white px-1 py-0.5 rounded shadow-sm border border-red-100">PDF</span>
+                            <div className="w-full h-full p-2 group-hover:scale-110 transition duration-500">
+                              <div className="w-full h-full bg-white border border-red-200 rounded-lg shadow-sm overflow-hidden relative">
+                                <iframe
+                                  src={`${fullUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                                  className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none"
+                                  title="Assessment PDF Preview"
+                                />
+                                <div className="absolute top-1 right-1 bg-red-600 text-white text-[8px] px-1 rounded font-bold">PDF</div>
+                              </div>
                             </div>
                           ) : (
                             <FaFileAlt className="text-4xl text-gray-300" />
@@ -989,7 +1007,7 @@ export default function WarehouseAssessmentView() {
                         <div className="p-3 text-center border-t bg-white">
                           <p className="text-[10px] font-bold text-gray-700 truncate mb-2" title={name}>{name}</p>
                           <a
-                            href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${fileName}`}
+                            href={`http://localhost:5000/api/grievance/warehouse/assessment/download/${encodeURIComponent(fileName)}`}
                             className="text-indigo-600 hover:text-indigo-800 transition flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest bg-indigo-50 py-1.5 rounded-lg border border-indigo-100"
                           >
                             <FaDownload size={10} /> Download

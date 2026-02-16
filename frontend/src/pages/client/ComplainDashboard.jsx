@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchComplaints } from '../../api/complaintsApi';
 import GovHeader from "../../components/GovHeader";
@@ -18,6 +18,19 @@ export default function ComplaintUserDashboard() {
 
   // Search dropdown
   const [suggestions, setSuggestions] = useState([]);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setSuggestions([]);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     loadDashboard();
@@ -87,7 +100,7 @@ export default function ComplaintUserDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
 
             {/* Complaint ID Search */}
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <label className="block text-xs font-medium mb-1">Complaint ID</label>
               <input
                 value={complaintCode}
@@ -224,10 +237,10 @@ export default function ComplaintUserDashboard() {
                   <td className="p-2">{c.affected_quantity}</td>
                   <td className="p-2">
                     <span className={`px-2 py-1 rounded text-xs ${c.status === 'SUBMITTED'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : c.status === 'IN_PROGRESS'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : c.status === 'IN_PROGRESS'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                       }`}>
                       {c.status}
                     </span>

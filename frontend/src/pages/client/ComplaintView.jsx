@@ -65,13 +65,19 @@ export default function ComplaintView() {
 
   /* ---------- FILE HELPERS ---------- */
   const getFileName = (doc) => {
-    if (typeof doc === "string") return doc.split("-").slice(1).join("-");
-    return doc.original_name;
+    const name = typeof doc === "string" ? doc : doc.original_name || doc.file_name;
+    if (!name) return "Unnamed File";
+    if (typeof name === "string" && name.includes("-")) {
+      const parts = name.split("-");
+      if (parts.length > 1) return parts.slice(1).join("-");
+    }
+    return name;
   };
 
   const getFilePath = (doc) => {
-    if (typeof doc === "string") return doc;
-    return doc.file_name;
+    if (typeof doc === "string") return encodeURIComponent(doc);
+    const path = doc.path || doc.file_name;
+    return encodeURIComponent(path);
   };
 
   const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
