@@ -235,6 +235,7 @@ export default function QcDashboard() {
 
     const getStatusColor = (st) => {
         switch (st) {
+            case 'SUBMITTED': return 'bg-slate-100 text-slate-700 border-slate-200';
             case 'SAMPLE_DISPATCHED_WH': return 'bg-amber-100 text-amber-700 border-amber-200';
             case 'SAMPLE_RECEIVED_QC': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
             case 'REPORT_RECEIVED': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -502,6 +503,7 @@ export default function QcDashboard() {
                                     className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2 outline-none cursor-pointer"
                                 >
                                     <option value="">All Statuses</option>
+                                    <option value="SUBMITTED">Facility Raised</option>
                                     <option value="SAMPLE_DISPATCHED_WH">Sample Dispatched</option>
                                     <option value="SAMPLE_RECEIVED_QC">Sample Received</option>
                                     <option value="REPORT_RECEIVED">Report Received</option>
@@ -581,6 +583,7 @@ export default function QcDashboard() {
 
                             <div className="h-48 flex items-end justify-between gap-6 px-4">
                                 {[
+                                    { statusKey: "SUBMITTED", gradient: "from-slate-400 to-slate-600", label: "Facility Raised", hoverColor: "text-slate-600" },
                                     { statusKey: "SAMPLE_DISPATCHED_WH", gradient: "from-amber-400 to-amber-600", label: "Dispatch Warehouse", hoverColor: "text-amber-600" },
                                     { statusKey: "SAMPLE_RECEIVED_QC", gradient: "from-indigo-500 to-indigo-700", label: "Sample Received", hoverColor: "text-indigo-700" },
                                     { statusKey: "REPORT_RECEIVED", gradient: "from-blue-500 to-blue-700", label: "Report Received", hoverColor: "text-blue-700" },
@@ -588,7 +591,7 @@ export default function QcDashboard() {
                                 ].map(bar => {
                                     const count = allComplaints.filter(c => c.status === bar.statusKey).length;
                                     const maxCount = Math.max(...[
-                                        "SAMPLE_DISPATCHED_WH", "SAMPLE_RECEIVED_QC", "REPORT_RECEIVED", "RESOLVED"
+                                        "SUBMITTED", "SAMPLE_DISPATCHED_WH", "SAMPLE_RECEIVED_QC", "REPORT_RECEIVED", "RESOLVED"
                                     ].map(k => allComplaints.filter(c => c.status === k).length), 1);
 
                                     const height = count === 0 ? 2 : Math.max((count / maxCount) * 100, 10);

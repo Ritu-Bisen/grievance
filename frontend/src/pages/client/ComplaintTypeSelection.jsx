@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api.js";
 
@@ -10,8 +10,12 @@ import { FaBoxOpen, FaHeartbeat, FaExclamationTriangle } from "react-icons/fa";
 /* ---------------- MOCK DATA (TEMP) ---------------- */
 
 const facilities = [
-  { id: 1, name: "District Hospital Raipur", address: "Raipur, Chhattisgarh" },
-  { id: 2, name: "CHC Bilaspur", address: "Bilaspur, Chhattisgarh" },
+  { id: 1, name: "District Hospital Raipur", address: "Raipur, Chhattisgarh, 492001" },
+  { id: 2, name: "CHC Bilaspur", address: "Bilaspur, Chhattisgarh, 495001" },
+  { id: 3, name: "Civil Hospital Durg", address: "Durg, Chhattisgarh, 491001" },
+  { id: 4, name: "Medical College Jagdalpur", address: "Jagdalpur, Chhattisgarh, 494001" },
+  { id: 5, name: "PHC Ambikapur", address: "Ambikapur, Chhattisgarh, 497001" },
+  { id: 6, name: "District Hospital Rajnandgaon", address: "Rajnandgaon, Chhattisgarh, 491441" },
 ];
 
 const items = [
@@ -103,14 +107,12 @@ export default function ComplaintTypeSelection() {
             icon={FaBoxOpen}
             onClick={() => setSelectedType("PHYSICAL")}
           />
-          {(!JSON.parse(localStorage.getItem("user"))?.role || JSON.parse(localStorage.getItem("user"))?.role !== "WAREHOUSE") && (
-            <TypeCard
-              title="ADR Reaction"
-              description="Adverse drug reactions or side effects"
-              icon={FaHeartbeat}
-              onClick={() => setSelectedType("ADR")}
-            />
-          )}
+          <TypeCard
+            title="ADR Reaction"
+            description="Adverse drug reactions or side effects"
+            icon={FaHeartbeat}
+            onClick={() => setSelectedType("ADR")}
+          />
           <TypeCard
             title="Poor Quality"
             description="Quality issues like contamination or potency"
@@ -186,6 +188,7 @@ function TypeCard({ title, description, onClick, icon: Icon }) {
 function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintType }) {
   const navigate = useNavigate();
 
+  const [facilityQuery, setFacilityQuery] = useState("");
   const [facility, setFacility] = useState(null);
 
   const [itemCodeQuery, setItemCodeQuery] = useState("");
@@ -211,43 +214,49 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
   /* 🔹 WAREHOUSE ASSESSMENT STATE */
   const [sameComplaint, setSameComplaint] = useState("");
+  const [adrSeverity, setAdrSeverity] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [qualityDescription, setQualityDescription] = useState("");
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (user?.facility_name && user?.facility_address) {
-      setFacility({
+      const initialFacility = {
         name: user.facility_name,
         address: user.facility_address,
-      });
-    } else if (user?.role === "WAREHOUSE" && user?.warehouse_code) {
-      setFacility({
-        name: `WAREHOUSE: ${user.warehouse_code}`,
-        address: "Warehouse Initiated",
-      });
+      };
+      setFacility(initialFacility);
+      setFacilityQuery(user.facility_name);
     }
   }, []);
 
-  const itemResults = items.filter(i =>
-    i.code.toLowerCase().includes(itemCodeQuery.toLowerCase())
-  );
-
-  /* 🔹 BATCH FILTERING */
-  const user = JSON.parse(localStorage.getItem("user"));
-  const warehouseCode = user?.role === "WAREHOUSE" ? user.warehouse_code : null;
-
-  const filteredBatches = batches.filter(b => {
-    // If user is WAREHOUSE, only show their batches
-    if (warehouseCode && b.warehouse_code !== warehouseCode) return false;
-    return true;
+  const facilityResults = facilities.filter(f => {
+    if (facility && facility.name === facilityQuery) return true;
+    return f.name.toLowerCase().includes(facilityQuery.toLowerCase());
   });
 
-  const batchResults = filteredBatches.filter(b =>
-    b.batchNo.toLowerCase().includes(batchQuery.toLowerCase())
-  );
+  const itemResults = items.filter(i => {
+    if (item && item.code === itemCodeQuery) return true;
+    return i.code.toLowerCase().includes(itemCodeQuery.toLowerCase());
+  });
+
+  /* 🔹 BATCH FILTERING */
+  const batchResults = batches.filter(b => {
+    if (batch && batch.batchNo === batchQuery) return true;
+    return b.batchNo.toLowerCase().includes(batchQuery.toLowerCase());
+  });
 
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files);
+    const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+
+    // Size validation
+    const oversizedFiles = newFiles.filter(f => f.size > MAX_SIZE);
+    if (oversizedFiles.length > 0) {
+      alert(`Some files are larger than 20MB: ${oversizedFiles.map(f => f.name).join(", ")}`);
+      e.target.value = "";
+      return;
+    }
 
     // combine old + new files
     const combinedFiles = [...documents, ...newFiles];
@@ -276,9 +285,10 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
         !qty ||
         !description.trim() ||
         documents.length === 0 ||
-        (complaintType === "ADR" && !opdSlip)
+        (complaintType === "ADR" && !opdSlip) ||
+        (user?.role === "WAREHOUSE" && (!sameComplaint || !remarks || (complaintType === "ADR" && !adrSeverity) || (complaintType === "QUALITY" && !qualityDescription)))
       ) {
-        alert(complaintType === "ADR" ? "Please fill all mandatory fields including OPD Slip" : "Please fill all mandatory fields");
+        alert(complaintType === "ADR" ? "Please fill all mandatory fields including OPD Slip and Assessment details" : "Please fill all mandatory fields");
         return;
       }
 
@@ -313,6 +323,11 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
         formData.append("stock_facility", autoFilledData.stock_facility);
         formData.append("total_stock", autoFilledData.total_stock);
         formData.append("same_complaint_present", sameComplaint);
+        formData.append("remarks", remarks);
+
+        if (complaintType === "ADR") {
+          formData.append("adr_severity", adrSeverity);
+        }
 
         if (complaintType === "QUALITY") {
           formData.append("quality_description", qualityDescription);
@@ -348,19 +363,29 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
 
       <div className="p-6 space-y-6">
 
-        {JSON.parse(localStorage.getItem("user"))?.role !== "WAREHOUSE" && (
-          <Section title="Facility Details">
-            <ReadOnlyInput
-              label="Facility Name *"
-              value={facility?.name || ""}
-            />
+        <Section title="Facility Details">
+          <DropdownInput
+            label="Facility Name *"
+            value={facilityQuery}
+            onChange={(v) => {
+              setFacilityQuery(v);
+              setFacility(null);
+            }}
+            results={facilityResults.map(f => f.name)}
+            onSelect={(name) => {
+              const f = facilities.find(x => x.name === name);
+              if (f) {
+                setFacility(f);
+                setFacilityQuery(f.name);
+              }
+            }}
+          />
 
-            <ReadOnlyInput
-              label="Facility Address *"
-              value={facility?.address || ""}
-            />
-          </Section>
-        )}
+          <ReadOnlyInput
+            label="Facility Address *"
+            value={facility?.address || ""}
+          />
+        </Section>
 
 
         <Section title="Item Details">
@@ -500,6 +525,39 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
                 </select>
               </div>
 
+              {/* ADR SEVERITY (ONLY FOR ADR) */}
+              {complaintType === "ADR" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-gray-800 mb-1">
+                    ADR Reaction Severity *
+                  </label>
+                  <select
+                    value={adrSeverity}
+                    onChange={(e) => setAdrSeverity(e.target.value)}
+                    className="w-full px-3 py-2 border rounded border-green-500 focus:ring-2 focus:ring-green-300 outline-none"
+                  >
+                    <option value="">Select Severity</option>
+                    <option value="MILD">Mild</option>
+                    <option value="MODERATE">Moderate</option>
+                    <option value="SEVERE">Severe</option>
+                  </select>
+                </div>
+              )}
+
+              {/* REMARKS */}
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-800 mb-1">
+                  Warehouse Remarks *
+                </label>
+                <textarea
+                  rows="3"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="w-full px-3 py-2 border rounded border-green-500 focus:ring-2 focus:ring-green-300 outline-none"
+                  placeholder="Enter assessment remarks..."
+                />
+              </div>
+
               {/* QUALITY DESCRIPTION (ONLY FOR QUALITY) */}
               {complaintType === "QUALITY" && (
                 <div className="mb-4">
@@ -531,12 +589,12 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
                 <input
                   type="file"
                   multiple
-                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,video/*"
                   onChange={handleFileChange}
                   className="hidden"
                 />
               </label>
-              <span className="text-xs text-gray-500 italic">Max 5 files (Images, PDF, Doc)</span>
+              <span className="text-xs text-gray-500 italic">Max 5 files (Images, PDF, Video, Doc - Max 20MB each)</span>
             </div>
 
             {/* ✅ SMALL FILE THUMBNAILS (NEAR BUTTON) */}
@@ -599,7 +657,15 @@ function ComplaintBaseForm({ title, categoryLabel, categoryOptions, complaintTyp
                     <input
                       type="file"
                       accept=".pdf"
-                      onChange={(e) => setOpdSlip(e.target.files[0])}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file && file.size > 20 * 1024 * 1024) {
+                          alert("OPD Slip must be smaller than 20MB");
+                          e.target.value = "";
+                          return;
+                        }
+                        setOpdSlip(file);
+                      }}
                       className="hidden"
                     />
                   </label>
@@ -660,9 +726,20 @@ function ReadOnlyInput({ label, value }) {
 
 function DropdownInput({ label, value, results, onChange, onSelect }) {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <label className="block text-sm mb-1">{label}</label>
       <input
         value={value}
@@ -671,10 +748,12 @@ function DropdownInput({ label, value, results, onChange, onSelect }) {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        className="border px-3 py-2 w-full rounded"
+        onClick={() => setOpen(true)}
+        className="border px-3 py-2 w-full rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+        placeholder="Search..."
       />
       {open && results.length > 0 && (
-        <div className="absolute bg-white border w-full mt-1 rounded shadow z-10">
+        <div className="absolute bg-white border w-full mt-1 rounded shadow-xl z-10 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-1">
           {results.map((r, i) => (
             <div
               key={i}
@@ -682,7 +761,7 @@ function DropdownInput({ label, value, results, onChange, onSelect }) {
                 onSelect(r);
                 setOpen(false);
               }}
-              className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+              className="px-3 py-2 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
             >
               {r}
             </div>

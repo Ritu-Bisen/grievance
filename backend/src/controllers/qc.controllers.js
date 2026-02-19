@@ -51,7 +51,7 @@ export const getQcDashboard = async (req, res) => {
       FROM complaints c
       LEFT JOIN warehouse_assessments wa ON c.complaint_code = wa.complaint_code
       LEFT JOIN qc_assessments qa ON c.complaint_code = qa.complaint_code
-      WHERE (wa.sample_dispatch_date IS NOT NULL OR c.complaint_type = 'PHYSICAL')
+      WHERE 1=1
     `;
 
         const params = [];

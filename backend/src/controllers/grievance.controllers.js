@@ -70,10 +70,11 @@ export const createComplaint = async (req, res) => {
           total_stock,
           same_complaint_present,
           remarks,
+          adr_severity,
           quality_description,
           documents,
           sample_dispatch_date
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, NULL)`,
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, NULL)`,
         [
           complaintCode,
           req.body.complaint_type,
@@ -85,7 +86,8 @@ export const createComplaint = async (req, res) => {
           req.body.stock_facility || null,
           req.body.total_stock || null,
           req.body.same_complaint_present || null,
-          "Assessment submitted during creation",
+          req.body.remarks || "Assessment submitted during creation",
+          req.body.adr_severity || null,
           req.body.quality_description || null,
           "[]" // No separate docs for assessment in this flow, using complaint docs
         ]

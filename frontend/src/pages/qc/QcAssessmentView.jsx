@@ -527,192 +527,201 @@ export default function QcAssessmentView() {
                 )}
 
                 {/* ================= ACTION CENTER ================= */}
-                {!(complaint.status === "RESOLVED" || complaint.complaint_close_date) && (
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <FaCheckCircle className="text-purple-600" />
-                            Action Center
-                        </h3>
+                {(() => {
+                    const isResolved = complaint.status === "RESOLVED" || complaint.complaint_close_date;
+                    if (isResolved) return null;
 
-                        <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
-                            {/* PHYSICAL complaints with no sample dispatch - View Only */}
-                            {assessment?.assessment_type === "PHYSICAL" && !assessment?.sample_dispatch_date ? (
-                                <div className="flex items-center gap-4 text-amber-700 bg-amber-50 p-4 rounded-lg border border-amber-200">
-                                    <FaExclamationTriangle className="text-xl" />
-                                    <div>
-                                        <p className="font-bold">Physical Inspection Required</p>
-                                        <p className="text-sm">This is a physical complaint. Please review the details. No sample tracking is available for this complaint.</p>
-                                    </div>
-                                </div>
-                            ) : complaint.status === "SAMPLE_DISPATCHED_WH" ? (
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="font-bold text-purple-900 text-lg">Sample Receipt Acknowledgement</p>
-                                        <p className="text-gray-600">The warehouse has dispatched the sample. Confirm receipt to proceed with laboratory analysis.</p>
-                                    </div>
-                                    <div className="flex justify-end pt-2">
-                                        <button
-                                            onClick={handleReceiveSubmit}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition"
-                                        >
-                                            Mark Sample Received
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : complaint.status === "SAMPLE_RECEIVED_QC" ? (
-                                <div className="space-y-6">
-                                    <div>
-                                        <p className="font-bold text-purple-900 text-lg">Analysis Report Verification</p>
-                                        <p className="text-gray-600">Review the laboratory analysis report before acknowledging receipt.</p>
-                                    </div>
+                    const hasAction =
+                        complaint.status === "SAMPLE_DISPATCHED_WH" ||
+                        complaint.status === "SAMPLE_RECEIVED_QC" ||
+                        complaint.status === "REPORT_RECEIVED" ||
+                        complaint.status === "APPROVE_BY_QC" ||
+                        (assessment?.assessment_type === "PHYSICAL" && !assessment?.sample_dispatch_date);
 
-                                    {!report ? (
-                                        <div className="flex items-center gap-4 text-red-700 bg-red-50 p-4 rounded-lg border border-red-200">
-                                            <FaExclamationTriangle className="text-xl" />
-                                            <div>
-                                                <p className="font-bold uppercase tracking-widest text-[10px]">Attention Required</p>
-                                                <p className="text-sm font-medium italic">Analysis Report not found in the laboratory system for this batch.</p>
-                                            </div>
+                    if (!hasAction) return null;
+
+                    return (
+                        <div className="mt-8 pt-6 border-t border-gray-200">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <FaCheckCircle className="text-purple-600" />
+                                Action Center
+                            </h3>
+
+                            <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
+                                {/* PHYSICAL complaints with no sample dispatch - View Only */}
+                                {assessment?.assessment_type === "PHYSICAL" && !assessment?.sample_dispatch_date ? (
+                                    <div className="flex items-center gap-4 text-amber-700 bg-amber-50 p-4 rounded-lg border border-amber-200">
+                                        <FaExclamationTriangle className="text-xl" />
+                                        <div>
+                                            <p className="font-bold">Physical Inspection Required</p>
+                                            <p className="text-sm">This is a physical complaint. Please review the details. No sample tracking is available for this complaint.</p>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {/* Report Remark */}
-                                            <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm">
-                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[2px] block mb-2">Analysis Report Remark</label>
-                                                <p className="text-gray-800 font-medium italic leading-relaxed">
-                                                    "{report.report_description || "No specific remarks provided by the laboratory."}"
-                                                </p>
-                                            </div>
-
-                                            {/* Report PDF Preview */}
-                                            <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm overflow-hidden">
-                                                <label className="text-[10px] font-bold text-purple-500 uppercase tracking-[2px] block mb-3">Report PDF Preview</label>
-                                                <div className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 h-[400px]">
-                                                    {(() => {
-                                                        const isExternalUrl = report.report_pdf?.startsWith('http');
-                                                        const pdfUrl = isExternalUrl
-                                                            ? report.report_pdf
-                                                            : `http://localhost:5000/uploads/reports/${report.report_pdf}`;
-
-                                                        const embedUrl = isExternalUrl
-                                                            ? `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
-                                                            : pdfUrl;
-
-                                                        return (
-                                                            <iframe
-                                                                src={embedUrl}
-                                                                className="w-full h-full"
-                                                                title="QC Report Preview"
-                                                            />
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-
-                                            {/* Action Button */}
-                                            <div className="flex justify-end pt-2">
-                                                <button
-                                                    onClick={handleReportSubmit}
-                                                    className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-green-100 transition transform active:scale-95 flex items-center gap-3"
-                                                >
-                                                    <span>REPORT RECEIVED</span>
-                                                    <FaCheckCircle />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (complaint.status === "REPORT_RECEIVED" || complaint.status === "APPROVE_BY_QC") && !complaint.complaint_close_date ? (
-                                <div className="space-y-6">
-                                    <div>
-                                        <p className="font-bold text-purple-900 text-lg">Final Resolution Feedback</p>
-                                        <p className="text-gray-600">Based on the reports and assessments, provide the final decision and closing remarks.</p>
                                     </div>
-
+                                ) : complaint.status === "SAMPLE_DISPATCHED_WH" ? (
                                     <div className="space-y-4">
-                                        <div className="space-y-4">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">Final Remarks *</label>
-                                                <textarea
-                                                    rows="3"
-                                                    value={resolutionRemarks}
-                                                    onChange={(e) => setResolutionRemarks(e.target.value)}
-                                                    className="w-full border-2 border-purple-100 px-4 py-3 rounded-xl bg-white focus:border-purple-600 transition outline-none text-sm shadow-sm"
-                                                    placeholder="Enter final summary..."
-                                                />
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">Supporting Document (Optional)</label>
-                                                <div className="flex items-center gap-4 bg-purple-50/30 p-2 rounded-xl border border-purple-100">
-                                                    <input
-                                                        type="file"
-                                                        id="qc-res-simple"
-                                                        className="hidden"
-                                                        accept="image/*"
-                                                        onChange={(e) => {
-                                                            const f = e.target.files[0];
-                                                            if (f) {
-                                                                setResolutionFile(f);
-                                                                setResolutionFilePreview(URL.createObjectURL(f));
-                                                            }
-                                                        }}
-                                                    />
-                                                    {!resolutionFilePreview ? (
-                                                        <label
-                                                            htmlFor="qc-res-simple"
-                                                            className="flex-1 flex items-center justify-center gap-2 py-2 bg-white border border-purple-200 text-purple-600 rounded-lg text-xs font-bold cursor-pointer hover:bg-purple-600 hover:text-white transition-all shadow-sm"
-                                                        >
-                                                            <FaFileUpload size={14} />
-                                                            Select Document Image
-                                                        </label>
-                                                    ) : (
-                                                        <div className="flex-1 flex items-center justify-between gap-3 bg-white p-1 pr-3 rounded-lg border border-purple-200">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-md overflow-hidden border border-purple-100 shadow-sm">
-                                                                    <img src={resolutionFilePreview} className="w-full h-full object-cover" alt="Preview" />
-                                                                </div>
-                                                                <span className="text-[10px] font-bold text-purple-700 truncate max-w-[150px]">{resolutionFile.name}</span>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setResolutionFile(null);
-                                                                    setResolutionFilePreview(null);
-                                                                }}
-                                                                className="text-red-500 hover:text-red-700 transition font-black text-xs"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        <div>
+                                            <p className="font-bold text-purple-900 text-lg">Sample Receipt Acknowledgement</p>
+                                            <p className="text-gray-600">The warehouse has dispatched the sample. Confirm receipt to proceed with laboratory analysis.</p>
                                         </div>
-
                                         <div className="flex justify-end pt-2">
                                             <button
-                                                onClick={() => {
-                                                    if (!resolutionRemarks) return toast.error("Please enter remarks");
-                                                    setPendingAction("RESOLVE");
-                                                    setReviewMode(true);
-                                                }}
-                                                className="bg-purple-800 hover:bg-purple-900 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition"
+                                                onClick={handleReceiveSubmit}
+                                                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition"
                                             >
-                                                Finalize & Resolve Complaint
+                                                Mark Sample Received
                                             </button>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-4 text-gray-500 bg-gray-50 p-4 rounded-lg border border-gray-200 italic">
-                                    <FaRegCircle className="text-xl" />
-                                    <span>No pending actions for this complaint status.</span>
-                                </div>
-                            )}
+                                ) : complaint.status === "SAMPLE_RECEIVED_QC" ? (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <p className="font-bold text-purple-900 text-lg">Analysis Report Verification</p>
+                                            <p className="text-gray-600">Review the laboratory analysis report before acknowledging receipt.</p>
+                                        </div>
+
+                                        {!report ? (
+                                            <div className="flex items-center gap-4 text-red-700 bg-red-50 p-4 rounded-lg border border-red-200">
+                                                <FaExclamationTriangle className="text-xl" />
+                                                <div>
+                                                    <p className="font-bold uppercase tracking-widest text-[10px]">Attention Required</p>
+                                                    <p className="text-sm font-medium italic">Analysis Report not found in the laboratory system for this batch.</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {/* Report Remark */}
+                                                <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[2px] block mb-2">Analysis Report Remark</label>
+                                                    <p className="text-gray-800 font-medium italic leading-relaxed">
+                                                        "{report.report_description || "No specific remarks provided by the laboratory."}"
+                                                    </p>
+                                                </div>
+
+                                                {/* Report PDF Preview */}
+                                                <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm overflow-hidden">
+                                                    <label className="text-[10px] font-bold text-purple-500 uppercase tracking-[2px] block mb-3">Report PDF Preview</label>
+                                                    <div className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 h-[400px]">
+                                                        {(() => {
+                                                            const isExternalUrl = report.report_pdf?.startsWith('http');
+                                                            const pdfUrl = isExternalUrl
+                                                                ? report.report_pdf
+                                                                : `http://localhost:5000/uploads/reports/${report.report_pdf}`;
+
+                                                            const embedUrl = isExternalUrl
+                                                                ? `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
+                                                                : pdfUrl;
+
+                                                            return (
+                                                                <iframe
+                                                                    src={embedUrl}
+                                                                    className="w-full h-full"
+                                                                    title="QC Report Preview"
+                                                                />
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Button */}
+                                                <div className="flex justify-end pt-2">
+                                                    <button
+                                                        onClick={handleReportSubmit}
+                                                        className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-green-100 transition transform active:scale-95 flex items-center gap-3"
+                                                    >
+                                                        <span>REPORT RECEIVED</span>
+                                                        <FaCheckCircle />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (complaint.status === "REPORT_RECEIVED" || complaint.status === "APPROVE_BY_QC") && !complaint.complaint_close_date ? (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <p className="font-bold text-purple-900 text-lg">Final Resolution Feedback</p>
+                                            <p className="text-gray-600">Based on the reports and assessments, provide the final decision and closing remarks.</p>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">Final Remarks *</label>
+                                                    <textarea
+                                                        rows="3"
+                                                        value={resolutionRemarks}
+                                                        onChange={(e) => setResolutionRemarks(e.target.value)}
+                                                        className="w-full border-2 border-purple-100 px-4 py-3 rounded-xl bg-white focus:border-purple-600 transition outline-none text-sm shadow-sm"
+                                                        placeholder="Enter final summary..."
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block">Supporting Document (Optional)</label>
+                                                    <div className="flex items-center gap-4 bg-purple-50/30 p-2 rounded-xl border border-purple-100">
+                                                        <input
+                                                            type="file"
+                                                            id="qc-res-simple"
+                                                            className="hidden"
+                                                            accept="image/*"
+                                                            onChange={(e) => {
+                                                                const f = e.target.files[0];
+                                                                if (f) {
+                                                                    setResolutionFile(f);
+                                                                    setResolutionFilePreview(URL.createObjectURL(f));
+                                                                }
+                                                            }}
+                                                        />
+                                                        {!resolutionFilePreview ? (
+                                                            <label
+                                                                htmlFor="qc-res-simple"
+                                                                className="flex-1 flex items-center justify-center gap-2 py-2 bg-white border border-purple-200 text-purple-600 rounded-lg text-xs font-bold cursor-pointer hover:bg-purple-600 hover:text-white transition-all shadow-sm"
+                                                            >
+                                                                <FaFileUpload size={14} />
+                                                                Select Document Image
+                                                            </label>
+                                                        ) : (
+                                                            <div className="flex-1 flex items-center justify-between gap-3 bg-white p-1 pr-3 rounded-lg border border-purple-200">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 rounded-md overflow-hidden border border-purple-100 shadow-sm">
+                                                                        <img src={resolutionFilePreview} className="w-full h-full object-cover" alt="Preview" />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-bold text-purple-700 truncate max-w-[150px]">{resolutionFile.name}</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setResolutionFile(null);
+                                                                        setResolutionFilePreview(null);
+                                                                    }}
+                                                                    className="text-red-500 hover:text-red-700 transition font-black text-xs"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end pt-2">
+                                                <button
+                                                    onClick={() => {
+                                                        if (!resolutionRemarks) return alert("Please enter remarks");
+                                                        setPendingAction("RESOLVE");
+                                                        setReviewMode(true);
+                                                    }}
+                                                    className="bg-purple-800 hover:bg-purple-900 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition"
+                                                >
+                                                    Finalize & Resolve Complaint
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             {/* ================= REVIEW OVERLAY ================= */}

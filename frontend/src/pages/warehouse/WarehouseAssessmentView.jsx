@@ -450,6 +450,7 @@ export default function WarehouseAssessmentView() {
 
   const isImage = (name) => /\.(jpg|jpeg|png|webp)$/i.test(name);
   const isPDF = (name, url = "") => /\.pdf$/i.test(name) || (url && /\.pdf($|\?|#)/i.test(url));
+  const isVideo = (name) => /\.(mp4|webm|ogg|mov)$/i.test(name);
   const isText = (name) => /\.(txt|csv)$/i.test(name);
 
 
@@ -831,6 +832,7 @@ export default function WarehouseAssessmentView() {
                       const fullUrl = `http://localhost:5000/uploads/${path}`;
                       const isImg = isImage(name);
                       const isPdf = isPDF(name);
+                      const isVid = isVideo(name);
 
                       return (
                         <div
@@ -851,7 +853,23 @@ export default function WarehouseAssessmentView() {
                                     className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none"
                                     title="PDF Preview"
                                   />
-                                  <div className="absolute top-1 right-1 bg-red-600 text-white text-[8px] px-1 rounded font-bold">PDF</div>
+                                  <div className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1.5 rounded font-bold">PDF</div>
+                                </div>
+                              </div>
+                            ) : isVid ? (
+                              <div className="w-full h-full p-2 group-hover:scale-110 transition duration-500">
+                                <div className="w-full h-full bg-black border border-gray-700 rounded-lg shadow-sm overflow-hidden relative flex items-center justify-center">
+                                  <video
+                                    src={`${fullUrl}#t=0.1`}
+                                    className="w-full h-full object-cover opacity-60"
+                                    preload="metadata"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
+                                      <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent translate-x-0.5"></div>
+                                    </div>
+                                  </div>
+                                  <div className="absolute top-1 right-1 bg-blue-600 text-white text-[10px] px-1.5 rounded font-bold uppercase">Video</div>
                                 </div>
                               </div>
                             ) : (
@@ -977,6 +995,7 @@ export default function WarehouseAssessmentView() {
                     const fullUrl = `http://localhost:5000/uploads/assessment/${fileName}`;
                     const isImg = isImage(name);
                     const isPdf = isPDF(name);
+                    const isVid = isVideo(name);
 
                     return (
                       <div key={`as-doc-${index}`} className="group border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition bg-gray-50 flex flex-col">
@@ -994,7 +1013,23 @@ export default function WarehouseAssessmentView() {
                                   className="w-[400%] h-[400%] origin-top-left scale-[0.25] pointer-events-none"
                                   title="Assessment PDF Preview"
                                 />
-                                <div className="absolute top-1 right-1 bg-red-600 text-white text-[8px] px-1 rounded font-bold">PDF</div>
+                                <div className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1.5 rounded font-bold">PDF</div>
+                              </div>
+                            </div>
+                          ) : isVid ? (
+                            <div className="w-full h-full p-2 group-hover:scale-110 transition duration-500">
+                              <div className="w-full h-full bg-black border border-gray-700 rounded-lg shadow-sm overflow-hidden relative flex items-center justify-center">
+                                <video
+                                  src={`${fullUrl}#t=0.1`}
+                                  className="w-full h-full object-cover opacity-60"
+                                  preload="metadata"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
+                                    <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent translate-x-0.5"></div>
+                                  </div>
+                                </div>
+                                <div className="absolute top-1 right-1 bg-blue-600 text-white text-[10px] px-1.5 rounded font-bold uppercase">Video</div>
                               </div>
                             </div>
                           ) : (
@@ -1401,6 +1436,13 @@ export default function WarehouseAssessmentView() {
                     src={previewFile.url}
                     className="w-full h-[70vh] rounded border shadow-sm"
                     title="preview"
+                  />
+                ) : isVideo(previewFile.name) ? (
+                  <video
+                    src={previewFile.url}
+                    controls
+                    autoPlay
+                    className="max-h-[70vh] w-full rounded shadow-sm bg-black"
                   />
                 ) : (
                   <div className="p-10 text-center">

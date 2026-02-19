@@ -9,5 +9,8 @@ const storage = multer.diskStorage({
 
 export const assessmentUpload = multer({
   storage,
-  limits: { files: 5 }
+  limits: {
+    files: 5,
+    fileSize: 20 * 1024 * 1024
+  }
 });

@@ -19,7 +19,8 @@ import {
   FaSearch,
   FaBroom,
   FaDownload,
-  FaUserShield
+  FaUserShield,
+  FaFilter
 } from "react-icons/fa";
 
 /* ============================================================= */
@@ -500,7 +501,6 @@ export default function ComplaintUserDashboard() {
                 </select>
               </div>
 
-              {/* Date Filter */}
               <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                 <select
                   value={dateFilter}
@@ -511,7 +511,33 @@ export default function ComplaintUserDashboard() {
                   <option value="TODAY">Today</option>
                   <option value="YESTERDAY">Yesterday</option>
                   <option value="LAST_7_DAYS">Last 7 Days</option>
+                  <option value="LAST_30_DAYS">Last 30 Days</option>
+                  <option value="THIS_MONTH">This Month</option>
+                  <option value="LAST_MONTH">Last Month</option>
+                  <option value="CUSTOM">Custom Range</option>
                 </select>
+
+                {dateFilter === "CUSTOM" && (
+                  <>
+                    <div className="w-px h-4 bg-slate-300 mx-2"></div>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={e => setFromDate(e.target.value)}
+                      className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2"
+                    />
+                    <span className="text-slate-400 text-[10px] font-black uppercase">TO</span>
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={e => setToDate(e.target.value)}
+                      className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 px-2"
+                    />
+                    <button onClick={() => loadDashboard(activeComplaintType, fromDate, toDate, status, complaintCode)} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-md shadow-sm transition-colors">
+                      <FaFilter size={10} />
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* CLEAR FILTER */}
